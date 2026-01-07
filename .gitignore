@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.env
+*.log
+orchestrator/orchestrator
+reporter/db_data/
+*.sqlite3
+.vscode/
+.idea/

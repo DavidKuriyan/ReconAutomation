@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETHER RECON | user@example.com</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --bg-panel: #0a0a0a;
+            --bg-card: #111111;
+
+            --text-main: #e0e0e0;
+            --text-muted: #6b7280;
+
+            --accent-primary: #00f0ff;
+            /* Cyan */
+            --accent-secondary: #7000ff;
+            /* Purple */
+            --danger: #ff003c;
+            /* Red */
+            --success: #00ff9f;
+            /* Green */
+            --warning: #fcee0a;
+            /* Yellow */
+
+            --border: #333333;
+            --border-glow: rgba(0, 240, 255, 0.3);
+
+            --font-headings: 'Rajdhani', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-primary) var(--bg-dark);
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--font-mono);
+            background: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            /* App-like feel */
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-secondary);
+            border-radius: 3px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            height: 100vh;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: var(--font-headings);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+            position: relative;
+        }
+
+        .logo::after {
+            content: "v1.0";
+            position: absolute;
+            bottom: -10px;
+            right: 0;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.8rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            font-family: var(--font-headings);
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            color: var(--accent-primary);
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        .nav-item.active {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-primary);
+            border-left: 3px solid var(--accent-primary);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+        }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background: currentColor;
+            mask-size: contain;
+            -webkit-mask-size: contain;
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+        }
+
+        /* --- CONTENT AREA --- */
+        .content {
+            padding: 0;
+            overflow-y: auto;
+            position: relative;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .view-section {
+            display: none;
+            /* Hidden by default */
+            padding: 2rem;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            position: relative;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100px;
+            height: 3px;
+            background: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        h1 {
+            margin: 0;
+            font-family: var(--font-headings);
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+
+        h2 {
+            font-family: var(--font-headings);
+            color: var(--accent-primary);
+            margin-top: 2rem;
+            border-left: 4px solid var(--accent-secondary);
+            padding-left: 1rem;
+            text-transform: uppercase;
+        }
+
+        .meta-info {
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            padding: 0.4rem 1rem;
+            font-family: var(--font-headings);
+            font-weight: 700;
+            font-size: 0.9rem;
+            background: rgba(0, 255, 159, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 255, 159, 0.2);
+        }
+
+        /* --- DASHBOARD GRIDS --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-secondary), transparent);
+        }
+
+        .stat-val {
+            font-family: var(--font-headings);
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        /* --- STANDARD GRID & CARDS --- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-headings);
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--accent-primary);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* --- TABLES --- */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: normal;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+        }
+
+        /* --- SPECIFIC ELEMENTS --- */
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.4rem;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+        }
+
+        .metric-val {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .dot-green {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .dot-red {
+            background: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        .dot-yellow {
+            background: var(--warning);
+            box-shadow: 0 0 8px var(--warning);
+        }
+
+        /* Severity Tags */
+        .severity {
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .sev-critical {
+            background: rgba(255, 0, 60, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .sev-high {
+            background: rgba(252, 238, 10, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .sev-medium {
+            background: rgba(0, 240, 255, 0.2);
+            color: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .sev-low {
+            background: rgba(107, 114, 128, 0.2);
+            color: var(--text-muted);
+            border: 1px solid var(--text-muted);
+        }
+
+        a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--accent-primary);
+        }
+
+        a:hover {
+            color: #fff;
+            border-bottom-style: solid;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">AETHER<span style="color:#fff">RECON</span></div>
+            <div class="nav-menu">
+                <div class="nav-item active" onclick="showSection('dashboard', this)">
+                    Dashboard
+                </div>
+                <div class="nav-item" onclick="showSection('network', this)">
+                    Network Map
+                </div>
+                <div class="nav-item" onclick="showSection('web', this)">
+                    Web Recon
+                </div>
+                <div class="nav-item" onclick="showSection('vulns', this)">
+                    Vulnerabilities <span
+                        style="margin-left:auto; font-size:0.8rem; background:var(--danger); color:black; padding:0 5px; border-radius:2px;">5</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENT -->
+        <main class="content">
+
+            <!-- SECTION: DASHBOARD -->
+            <div id="dashboard" class="view-section active">
+                <header>
+                    <div>
+                        <h1>user@example.com</h1>
+                        <div class="meta-info">SCAN ID: Wed Jan  7 13:02:10 2026</div>
+                    </div>
+                    <span class="badge">SCAN COMPLETE</span>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:var(--success)">0</div>
+                        <div class="stat-label">Open Ports</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:var(--accent-primary)">0</div>
+                        <div class="stat-label">Subdomains</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:var(--warning)">0</div>
+                        <div class="stat-label">Technologies</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" style="color:var(--danger)">5</div>
+                        <div class="stat-label">Findings</div>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <!-- WHOIS -->
+                    <div class="card">
+                        <div class="card-header">Domain Identity</div>
+                        <div class="card-body">
+                            
+                            <div style="color: var(--text-muted)">No WHOIS data available</div>
+                            
+                        </div>
+                    </div>
+
+                    <!-- SSL -->
+                    <div class="card">
+                        <div class="card-header">SSL Certificate</div>
+                        <div class="card-body">
+                            
+                            <div style="color: var(--text-muted)">No SSL data available</div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: NETWORK -->
+            <div id="network" class="view-section">
+                <header>
+                    <div>
+                        <h1>Network Surface</h1>
+                        <div class="meta-info">TCP/UDP PORTS & DNS</div>
+                    </div>
+                </header>
+
+                <div class="grid">
+                    <!-- PORTS -->
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-header">Open Ports</div>
+                        <div class="card-body" style="padding:0">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Port</th>
+                                        <th>Protocol</th>
+                                        <th>Service</th>
+                                        <th>Version</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                    <tr>
+                                        <td colspan="4" style="text-align:center; color: var(--text-muted)">No open
+                                            ports found.</td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- DNS -->
+                    <div class="card">
+                        <div class="card-header">DNS Records</div>
+                        <div class="card-body" style="padding:0">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                    <tr>
+                                        <td colspan="2" style="text-align:center">No records.</td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: WEB -->
+            <div id="web" class="view-section">
+                <header>
+                    <div>
+                        <h1>Web Recon</h1>
+                        <div class="meta-info">APP STACK & ENUMERATION</div>
+                    </div>
+                </header>
+
+                <div class="grid">
+                    <!-- TECH -->
+                    <div class="card">
+                        <div class="card-header">Technologies</div>
+                        <div class="card-body" style="padding:0">
+                            <table>
+                                <tbody>
+                                    
+                                    <tr>
+                                        <td style="text-align:center; color: var(--text-muted)">No technologies
+                                            detected.</td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SUBDOMAINS -->
+                    <div class="card">
+                        <div class="card-header">Subdomains</div>
+                        <div class="card-body" style="padding:0">
+                            <ul style="list-style: none; padding: 0; margin: 0;">
+                                
+                                <li style="padding:1rem; text-align:center; color:var(--text-muted)">No subdomains
+                                    found.</li>
+                                
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DIRS -->
+                <div class="card" style="margin-top: 1.5rem">
+                    <div class="card-header">Directory Enumeration</div>
+                    <div class="card-body" style="padding:0">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Path</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                                <tr>
+                                    <td colspan="2" style="text-align:center; color: var(--text-muted)">No interesting
+                                        directories found.</td>
+                                </tr>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: VULNERABILITIES -->
+            <div id="vulns" class="view-section">
+                <header>
+                    <div>
+                        <h1>Vulnerabilities</h1>
+                        <div class="meta-info">SECURITY FINDINGS</div>
+                    </div>
+                </header>
+
+                
+                <div class="grid" style="grid-template-columns: 1fr;">
+                    
+                    <div class="card"
+                        style="border-left: 4px solid var(--accent-primary);">
+                        <div class="card-header">
+                            <span>Subdomain Found: user@example.com</span>
+                            <span
+                                class="severity sev-low">
+                                Low
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-top:0; color:var(--text-muted)">Discovered new subdomain during reconnaissance</p>
+                            <div
+                                style="margin-top:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:4px; font-family:var(--font-mono); font-size:0.85rem; word-break:break-all;">
+                                https://user@example.com
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card"
+                        style="border-left: 4px solid var(--accent-primary);">
+                        <div class="card-header">
+                            <span>Subdomain Found: user@example.com</span>
+                            <span
+                                class="severity sev-low">
+                                Low
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-top:0; color:var(--text-muted)">Discovered new subdomain during reconnaissance</p>
+                            <div
+                                style="margin-top:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:4px; font-family:var(--font-mono); font-size:0.85rem; word-break:break-all;">
+                                https://user@example.com
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card"
+                        style="border-left: 4px solid var(--accent-primary);">
+                        <div class="card-header">
+                            <span>Subdomain Found: user@example.com</span>
+                            <span
+                                class="severity sev-low">
+                                Low
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-top:0; color:var(--text-muted)">Discovered new subdomain during reconnaissance</p>
+                            <div
+                                style="margin-top:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:4px; font-family:var(--font-mono); font-size:0.85rem; word-break:break-all;">
+                                https://user@example.com
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card"
+                        style="border-left: 4px solid var(--accent-primary);">
+                        <div class="card-header">
+                            <span>Subdomain Found: user@example.com</span>
+                            <span
+                                class="severity sev-low">
+                                Low
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-top:0; color:var(--text-muted)">Discovered new subdomain during reconnaissance</p>
+                            <div
+                                style="margin-top:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:4px; font-family:var(--font-mono); font-size:0.85rem; word-break:break-all;">
+                                https://user@example.com
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card"
+                        style="border-left: 4px solid var(--accent-primary);">
+                        <div class="card-header">
+                            <span>Subdomain Found: user@example.com</span>
+                            <span
+                                class="severity sev-low">
+                                Low
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-top:0; color:var(--text-muted)">Discovered new subdomain during reconnaissance</p>
+                            <div
+                                style="margin-top:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:4px; font-family:var(--font-mono); font-size:0.85rem; word-break:break-all;">
+                                https://user@example.com
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+
+        </main>
+    </div>
+
+    <!-- NAVIGATION LOGIC -->
+    <script>
+        function showSection(sectionId, element) {
+            // Hide all sections
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // Show target section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Update sidebar active state
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>

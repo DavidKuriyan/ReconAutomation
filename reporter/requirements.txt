@@ -1,0 +1,6 @@
+redis
+dnspython
+requests
+beautifulsoup4
+pyopenssl
+jinja2
