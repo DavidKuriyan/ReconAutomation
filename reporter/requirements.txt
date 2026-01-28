@@ -1,6 +1,37 @@
-redis
+# Core Dependencies
+flask
 dnspython
 requests
 beautifulsoup4
 pyopenssl
 jinja2
+
+# Enhanced OSINT Modules
+python-whois
+python-dotenv
+ratelimit
+
+# Geolocation
+geoip2
+
+# Social Media Intelligence (SOCMINT)
+# Note: Sherlock is installed via git, not pip
+
+# Breach & Threat Intelligence
+shodan
+OTXv2
+
+# Metadata Extraction
+PyPDF2
+Pillow
+piexif
+
+# Search & Scraping
+googlesearch-python
+PyGithub
+
+# Additional utilities
+colorama
+tqdm
+xhtml2pdf
+

@@ -1,8 +1,9 @@
 import sqlite3
 
+
 def init_db():
     try:
-        conn = sqlite3.connect('aether.db')
+        conn = sqlite3.connect('argus.db')
         cursor = conn.cursor()
         
         with open('schema.sql', 'r') as f:
