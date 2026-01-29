@@ -463,6 +463,9 @@
                         style="margin-left:auto; font-size:0.8rem; background:var(--danger); color:black; padding:0 5px; border-radius:2px;">{{
                         findings|length }}</span>
                 </div>
+                <div class="nav-item" onclick="showSection('threat', this)">
+                    Threat Intel
+                </div>
             </div>
         </aside>
 
@@ -744,6 +747,60 @@
                         <h3>No Vulnerabilities Detected</h3>
                         <p style="color: var(--text-muted)">Great job! No standard security issues were found during
                             this scan.</p>
+                    </div>
+                </div>
+                {% endif %}
+            <!-- SECTION: THREAT INTEL -->
+            <div id="threat" class="view-section">
+                <header>
+                    <div>
+                        <h1>Threat Intelligence</h1>
+                        <div class="meta-info">VIRUSTOTAL / SHODAN / OTX</div>
+                    </div>
+                </header>
+
+                {% if threat_intel %}
+                <div class="grid">
+                    {% for t in threat_intel %}
+                    <div class="card" style="border-top: 3px solid {% if t.score > 0 %}var(--danger){% else %}var(--success){% endif %};">
+                        <div class="card-header">
+                            {{ t.source }}
+                            <span class="severity {% if t.score > 50 %}sev-critical{% elif t.score > 0 %}sev-medium{% else %}sev-low{% endif %}">
+                                Score: {{ t.score }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="metric-row"><span class="metric-label">Type</span> <span class="metric-val">{{ t.type }}</span></div>
+                            <div class="metric-row"><span class="metric-label">Value</span> <span class="metric-val" style="font-size:0.8rem">{{ t.value }}</span></div>
+                            
+                            {% if t.malicious > 0 %}
+                            <div class="metric-row"><span class="metric-label" style="color:var(--danger)">Malicious</span> <span class="metric-val" style="color:var(--danger)">{{ t.malicious }}</span></div>
+                            {% endif %}
+                            
+                            {% if t.suspicious > 0 %}
+                            <div class="metric-row"><span class="metric-label" style="color:var(--warning)">Suspicious</span> <span class="metric-val" style="color:var(--warning)">{{ t.suspicious }}</span></div>
+                            {% endif %}
+                            
+                            {% if t.tags %}
+                            <div style="margin-top:1rem;">
+                                <div class="metric-label" style="margin-bottom:0.5rem">Tags</div>
+                                <div style="font-size:0.8rem; color:var(--accent-primary)">{{ t.tags }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            <div style="margin-top:1rem; font-size:0.7rem; color:var(--text-muted); text-align:right;">
+                                Last Analysis: {{ t.date }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="card">
+                    <div class="card-body" style="text-align: center; padding: 3rem;">
+                        <div style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;">?</div>
+                        <h3>No Threat Intelligence Available</h3>
+                        <p style="color: var(--text-muted)">Run the scan with --active flag or check API key configuration.</p>
                     </div>
                 </div>
                 {% endif %}

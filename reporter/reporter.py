@@ -106,6 +106,26 @@ def generate_report(target):
     cursor.execute("SELECT title, severity, description, url FROM findings WHERE target_id = ?", (target_id,))
     findings = [{"title": r[0], "severity": r[1], "description": r[2], "url": r[3]} for r in cursor.fetchall()]
 
+    # 9. Threat Intelligence
+    cursor.execute("""
+        SELECT source, indicator_type, indicator_value, threat_score, 
+               malicious_count, suspicious_count, tags, last_analysis_date
+        FROM threat_intel WHERE target_id = ?
+    """, (target_id,))
+    
+    threat_intel = []
+    for r in cursor.fetchall():
+        threat_intel.append({
+            "source": r[0],
+            "type": r[1],
+            "value": r[2],
+            "score": r[3],
+            "malicious": r[4],
+            "suspicious": r[5],
+            "tags": r[6],
+            "date": r[7]
+        })
+
     # Define Base Directory for reliable paths
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
@@ -124,7 +144,8 @@ def generate_report(target):
         techs=techs,
         dirs=dirs,
         subdomains=subdomains,
-        findings=findings
+        findings=findings,
+        threat_intel=threat_intel
     )
     
     report_path = os.path.join(REPORT_DIR, f"{target}_report.html")

@@ -7,6 +7,11 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
+# Load environment variables from .env file
+# Prioritize .env.local for local overrides
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.local')):
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.local'))
+
 load_dotenv()
 
 class Config:
