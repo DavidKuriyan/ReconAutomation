@@ -82,10 +82,25 @@ class ReportGenerator:
         cursor.execute("SELECT title, severity, description, url FROM findings WHERE target_id=? GROUP BY title", (self.target_id,))
         data['findings'] = [dict(row) for row in cursor.fetchall()]
 
-        # Threat Intel
+        # Threat Intel (Enhanced)
         try:
-            cursor.execute("SELECT source, indicator_type, indicator_value, threat_score FROM threat_intel WHERE target_id=? GROUP BY indicator_value", (self.target_id,))
-            data['threat_intel'] = [dict(row) for row in cursor.fetchall()]
+            # Fetch all columns including additional_data JSON
+            cursor.execute("SELECT * FROM threat_intel WHERE target_id=?", (self.target_id,))
+            rows = cursor.fetchall()
+            threat_intel = []
+            for row in rows:
+                item = dict(row)
+                # Parse JSON data if available
+                try:
+                    import json
+                    if item.get('additional_data'):
+                        item['details'] = json.loads(item['additional_data'])
+                    else:
+                        item['details'] = {}
+                except:
+                    item['details'] = {}
+                threat_intel.append(item)
+            data['threat_intel'] = threat_intel
         except: data['threat_intel'] = []
 
         # Breach Data
@@ -143,6 +158,15 @@ class ReportGenerator:
         .badge-low { background-color: #5bc0de; }
         .badge-info { background-color: #5cb85c; }
         .footer { text-align: center; font-size: 10px; color: #777; margin-top: 50px; border-top: 1px solid #ddd; padding-top: 10px; }
+        
+        /* New Threat Intel Styles */
+        .ti-card { background: #f9f9f9; border-left: 4px solid #00ff9d; padding: 10px; margin-bottom: 10px; }
+        .ti-source { font-weight: bold; color: #333; font-size: 14px; margin-bottom: 5px; }
+        .ti-stats { font-size: 11px; color: #666; margin-bottom: 5px; }
+        .ti-details { font-size: 11px; background: #fff; border: 1px solid #eee; padding: 5px; margin-top: 5px; }
+        .ti-tags span { background: #e1e4e8; color: #333; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-right: 3px; }
+        .vuln-list { max-height: 100px; overflow-y: auto; font-size: 10px; margin-top: 5px; }
+        .vuln-item { color: #d9534f; }
     </style>
 </head>
 <body>
@@ -168,26 +192,82 @@ class ReportGenerator:
         {% if data.threat_intel %}
         <div class="section">
             <div class="section-title">Threat Intelligence</div>
-            <table>
-                <tr>
-                    <th>Source</th>
-                    <th>Type</th>
-                    <th>Indicator</th>
-                    <th>Score</th>
-                </tr>
-                {% for item in data.threat_intel %}
-                <tr>
-                    <td>{{ item.source }}</td>
-                    <td>{{ item.indicator_type }}</td>
-                    <td>{{ item.indicator_value }}</td>
-                    <td>
-                        <span class="badge {% if item.threat_score > 50 %}badge-high{% elif item.threat_score > 20 %}badge-med{% else %}badge-info{% endif %}">
-                            {{ item.threat_score }}
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
+            
+            {% for item in data.threat_intel %}
+            <div class="ti-card">
+                <div class="ti-source">
+                    {{ item.source }} 
+                    <span class="badge {% if item.threat_score > 50 %}badge-high{% elif item.threat_score > 20 %}badge-med{% else %}badge-info{% endif %}" style="float:right">
+                        Score: {{ item.threat_score }}
+                    </span>
+                </div>
+                
+                <div class="ti-stats">
+                    <strong>Type:</strong> {{ item.indicator_type }} | <strong>Value:</strong> {{ item.indicator_value }}
+                </div>
+
+                <!-- VirusTotal Specific -->
+                {% if item.source == 'VirusTotal' %}
+                <div class="ti-details">
+                    <div>
+                        <span style="color:#d9534f">Malicious: {{ item.malicious_count }}</span> | 
+                        <span style="color:#f0ad4e">Suspicious: {{ item.suspicious_count }}</span> | 
+                        <span style="color:#5cb85c">Harmless: {{ item.harmless_count }}</span>
+                    </div>
+                     {% if item.details.categories %}
+                    <div style="margin-top:5px; font-style:italic;">
+                        Categories: 
+                        {% for cat in item.details.categories.values() | unique | list %}
+                            {{ cat }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Shodan Specific -->
+                {% if item.source == 'Shodan' %}
+                <div class="ti-details">
+                    <div><strong>OS:</strong> {{ item.details.os|default('N/A') }}</div>
+                    <div><strong>ISP:</strong> {{ item.details.isp|default('N/A') }} (ASN: {{ item.details.asn|default('N/A') }})</div>
+                    <div><strong>Open Ports:</strong> {{ item.details.ports|join(', ') }}</div>
+                    
+                    {% if item.details.hostnames %}
+                    <div><strong>Hostnames:</strong> {{ item.details.hostnames|join(', ') }}</div>
+                    {% endif %}
+
+                    {% if item.details.vulns %}
+                    <div style="margin-top:5px;"><strong>Vulnerabilities ({{ item.details.vulns|length }}):</strong></div>
+                    <div class="vuln-list">
+                        {% for vuln in item.details.vulns %}
+                        <div class="vuln-item">{{ vuln }}</div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="color:#5cb85c; margin-top:5px;">No known vulnerabilities found.</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- OTX Specific -->
+                {% if item.source == 'AlienVault OTX' %}
+                <div class="ti-details">
+                    <div><strong>Pulse Count:</strong> {{ item.details.pulse_count|default(0) }}</div>
+                    <div><strong>Reputation:</strong> {{ item.details.reputation|default(0) }}</div>
+                    {% if item.details.validation %}
+                    <div style="margin-top:5px;"><strong>Validation:</strong></div>
+                    <ul>
+                    {% for v in item.details.validation %}
+                        <li>{{ v.source }}: {{ v.message }}</li>
+                    {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+            </div>
+            {% endfor %}
+            
         </div>
         {% endif %}
 

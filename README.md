@@ -103,6 +103,8 @@ Create `.env` file from template:
 copy .env.example .env
 ```
 
+> **⚠️ SECURITY WARNING:** Never commit your `.env` file to version control. It is already added to `.gitignore` to prevent accidental uploads. If you fork this repository, ensure your secrets remain local.
+
 Edit `.env` and add your API keys:
 
 | API | Purpose | Free Tier | Get Key |

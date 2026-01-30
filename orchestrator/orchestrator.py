@@ -867,6 +867,14 @@ class ReconEngine:
             
             # Threat Intelligence (NEW)
             if config.ENABLE_THREAT_INTEL:
+                # Ensure IP is resolved for Shodan
+                if not self.target_ip:
+                     try:
+                        self.target_ip = socket.gethostbyname(self.target)
+                        print(f"    - Resolved IP for Threat Intel: {self.target_ip}")
+                     except:
+                        pass
+                
                 threat = ThreatIntelligence(self.target, self.target_id, self.target_ip)
                 threat.execute()
                 self.log_audit("module_executed", "threat_intel")
