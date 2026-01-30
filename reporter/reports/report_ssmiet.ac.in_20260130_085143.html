@@ -29,6 +29,15 @@
         .badge-low { background-color: #5bc0de; }
         .badge-info { background-color: #5cb85c; }
         .footer { text-align: center; font-size: 10px; color: #777; margin-top: 50px; border-top: 1px solid #ddd; padding-top: 10px; }
+        
+        /* New Threat Intel Styles */
+        .ti-card { background: #f9f9f9; border-left: 4px solid #00ff9d; padding: 10px; margin-bottom: 10px; }
+        .ti-source { font-weight: bold; color: #333; font-size: 14px; margin-bottom: 5px; }
+        .ti-stats { font-size: 11px; color: #666; margin-bottom: 5px; }
+        .ti-details { font-size: 11px; background: #fff; border: 1px solid #eee; padding: 5px; margin-top: 5px; }
+        .ti-tags span { background: #e1e4e8; color: #333; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-right: 3px; }
+        .vuln-list { max-height: 100px; overflow-y: auto; font-size: 10px; margin-top: 5px; }
+        .vuln-item { color: #d9534f; }
     </style>
 </head>
 <body>
@@ -44,8 +53,8 @@
         <div class="section">
             <div class="section-title">Target Overview</div>
             <p><strong>Target:</strong> ssmiet.ac.in</p>
-            <p><strong>Scan Date:</strong> 2026-01-29 21:37:51</p>
-            <p><strong>Risk Score:</strong> 39/100</p>
+            <p><strong>Scan Date:</strong> 2026-01-30 08:51:43</p>
+            <p><strong>Risk Score:</strong> 46/100</p>
             
             <p><strong>Location:</strong> Toronto, Canada (Cloudflare, Inc.)</p>
             
@@ -54,26 +63,70 @@
         
         <div class="section">
             <div class="section-title">Threat Intelligence</div>
-            <table>
-                <tr>
-                    <th>Source</th>
-                    <th>Type</th>
-                    <th>Indicator</th>
-                    <th>Score</th>
-                </tr>
+            
+            
+            <div class="ti-card">
+                <div class="ti-source">
+                    VirusTotal 
+                    <span class="badge badge-info" style="float:right">
+                        Score: 0
+                    </span>
+                </div>
                 
-                <tr>
-                    <td>AlienVault OTX</td>
-                    <td>domain</td>
-                    <td>ssmiet.ac.in</td>
-                    <td>
-                        <span class="badge badge-info">
-                            0
-                        </span>
-                    </td>
-                </tr>
+                <div class="ti-stats">
+                    <strong>Type:</strong> domain | <strong>Value:</strong> ssmiet.ac.in
+                </div>
+
+                <!-- VirusTotal Specific -->
                 
-            </table>
+                <div class="ti-details">
+                    <div>
+                        <span style="color:#d9534f">Malicious: 0</span> | 
+                        <span style="color:#f0ad4e">Suspicious: 0</span> | 
+                        <span style="color:#5cb85c">Harmless: 62</span>
+                    </div>
+                     
+                </div>
+                
+
+                <!-- Shodan Specific -->
+                
+                
+                <!-- OTX Specific -->
+                
+
+            </div>
+            
+            <div class="ti-card">
+                <div class="ti-source">
+                    AlienVault OTX 
+                    <span class="badge badge-info" style="float:right">
+                        Score: 0
+                    </span>
+                </div>
+                
+                <div class="ti-stats">
+                    <strong>Type:</strong> domain | <strong>Value:</strong> ssmiet.ac.in
+                </div>
+
+                <!-- VirusTotal Specific -->
+                
+
+                <!-- Shodan Specific -->
+                
+                
+                <!-- OTX Specific -->
+                
+                <div class="ti-details">
+                    <div><strong>Pulse Count:</strong> 0</div>
+                    <div><strong>Reputation:</strong> 0</div>
+                    
+                </div>
+                
+
+            </div>
+            
+            
         </div>
         
 
@@ -170,7 +223,7 @@
                 
                 <tr>
                     <td>mail.ssmiet.ac.in</td>
-                    <td>104.21.94.33</td>
+                    <td>172.67.219.1</td>
                 </tr>
                 
                 <tr>
@@ -180,7 +233,7 @@
                 
                 <tr>
                     <td>webdisk.ssmiet.ac.in</td>
-                    <td>104.21.94.33</td>
+                    <td>172.67.219.1</td>
                 </tr>
                 
                 <tr>
@@ -200,22 +253,22 @@
                 
                 <tr>
                     <td>webmail.ssmiet.ac.in</td>
-                    <td>104.21.94.33</td>
-                </tr>
-                
-                <tr>
-                    <td>cpcontacts.ssmiet.ac.in</td>
-                    <td>104.21.94.33</td>
-                </tr>
-                
-                <tr>
-                    <td>ssmiet.ac.in</td>
                     <td>172.67.219.1</td>
                 </tr>
                 
                 <tr>
-                    <td>cpanel.ssmiet.ac.in</td>
+                    <td>cpcontacts.ssmiet.ac.in</td>
+                    <td>172.67.219.1</td>
+                </tr>
+                
+                <tr>
+                    <td>ssmiet.ac.in</td>
                     <td>104.21.94.33</td>
+                </tr>
+                
+                <tr>
+                    <td>cpanel.ssmiet.ac.in</td>
+                    <td>172.67.219.1</td>
                 </tr>
                 
             </table>
@@ -336,7 +389,7 @@
         
 
         <div class="footer">
-            <p>Generated by Argus OSINT Framework | Date: 2026-01-29 21:37:51</p>
+            <p>Generated by Argus OSINT Framework | Date: 2026-01-30 08:51:43</p>
             <p>CONFIDENTIAL - AUTHORIZED EYES ONLY</p>
         </div>
     </div>

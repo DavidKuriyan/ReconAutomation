@@ -102,7 +102,11 @@ class ThreatIntelligence:
             }
             
         except Exception as e:
-            print(f"    [!] Shodan check failed: {e}")
+            if "Access denied" in str(e) or "403" in str(e):
+                print(f"    [!] Shodan Access Denied: Your API key may be invalid or lacks permissions.")
+                print(f"        (Check key in .env.local or account credits at account.shodan.io)")
+            else:
+                print(f"    [!] Shodan check failed: {e}")
         
         return None
     
@@ -184,8 +188,8 @@ class ThreatIntelligence:
                 threat_data.get('malicious', 0),
                 threat_data.get('suspicious', 0),
                 threat_data.get('harmless', 0),
-                ', '.join(threat_data.get('tags', [])) if isinstance(threat_data.get('tags'), list) else '',
-                threat_data.get('categories', ''),
+                json.dumps(threat_data.get('tags', [])) if isinstance(threat_data.get('tags'), list) else '',
+                json.dumps(threat_data.get('categories', {})) if isinstance(threat_data.get('categories'), dict) else str(threat_data.get('categories', '')),
                 threat_data.get('last_analysis_date', ''),
                 ', '.join(threat_data.get('vulns', [])) if isinstance(threat_data.get('vulns'), list) else '',
                 json.dumps(threat_data)

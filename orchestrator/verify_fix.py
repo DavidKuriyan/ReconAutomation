@@ -61,10 +61,12 @@ def verify_fix():
             
     if not recon.target_ip:
         print("[!] FATAL: Could not resolve IP, Shodan check will fail.")
-        return
+        # Try anyway for verification
+        # return
 
     # 2. Run Threat Intel Module
     print("[*] Running Threat Intelligence Module...")
+    # Cleared old data...
     # Clean up previous threat intel for this target to ensure fresh fetch
     try:
         conn = sqlite3.connect(config.DB_PATH)
