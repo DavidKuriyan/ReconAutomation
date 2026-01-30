@@ -265,6 +265,25 @@ class ReportGenerator:
                 </div>
                 {% endif %}
 
+                <!-- Censys Specific -->
+                {% if item.source == 'Censys' %}
+                <div class="ti-details">
+                    {% if item.indicator_type == 'ip' %}
+                    <div><strong>Exposed Services:</strong> {{ item.details.services_count|default(0) }}</div>
+                    <div><strong>Open Ports:</strong> {{ item.details.ports|join(', ') }}</div>
+                    {% if item.details.location %}
+                    <div><strong>Location:</strong> {{ item.details.location.city }}, {{ item.details.location.country }}</div>
+                    {% endif %}
+                    {% if item.details.autonomous_system %}
+                    <div><strong>ASN:</strong> {{ item.details.autonomous_system.asn }} ({{ item.details.autonomous_system.name }})</div>
+                    {% endif %}
+                    {% else %}
+                    <div><strong>Related Hosts:</strong> {{ item.details.hit_count|default(0) }}</div>
+                    <div><strong>Summary:</strong> {{ item.details.summary }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
             </div>
             {% endfor %}
             

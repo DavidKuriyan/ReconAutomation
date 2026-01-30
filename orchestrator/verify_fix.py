@@ -1,93 +1,32 @@
-
-import os
 import sys
-import socket
-import sqlite3
+import os
 
-# Add current directory to path
-sys.path.insert(0, os.path.abspath('.'))
+# Ensure we can import modules from current directory
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from modules.threat_intel import ThreatIntelligence
-from modules.reporting import ReportGenerator
+from orchestrator import ReconEngine
 from config import config
 
-# Mock ReconEngine context
-class MockRecon:
-    def __init__(self, target):
-        self.target = target
-        self.target_id = None
-        self.target_ip = None
-        self.conn = None
-
-    def connect_db(self):
-        try:
-            self.conn = sqlite3.connect(config.DB_PATH, timeout=30.0)
-            return True
-        except Exception as e:
-            print(f"[!] DB Connection Error: {e}")
-            return False
-
-    def close_db(self):
-        if self.conn:
-            self.conn.close()
-
-    def get_or_create_target(self):
-        if not self.connect_db(): return
-        cursor = self.conn.cursor()
-        cursor.execute("INSERT OR IGNORE INTO targets (domain) VALUES (?)", (self.target,))
-        self.conn.commit()
-        cursor.execute("SELECT id FROM targets WHERE domain = ?", (self.target,))
-        result = cursor.fetchone()
-        if result:
-            self.target_id = result[0]
-        self.close_db()
-        print(f"[*] Target ID: {self.target_id}")
-
-def verify_fix():
-    target = "ssmiet.ac.in"
-    print(f"[*] Starting Verification for {target}")
+def verify_full_integration(target="ssmiet.ac.in"):
+    print(f"[*] Starting Integration Verification for {target}")
     
-    recon = MockRecon(target)
-    recon.get_or_create_target()
+    # Initialize Engine in Passive Mode to test modular structure quickly
+    print("[*] Initializing ReconEngine (Passive Mode)...")
+    recon = ReconEngine(target, consent_given=True, scan_mode='passive')
     
-    # 1. Test IP Resolution Logic (Copied from Orchestrator fix)
-    print("[*] Testing IP Resolution...")
-    if not recon.target_ip:
-         try:
-            recon.target_ip = socket.gethostbyname(recon.target)
-            print(f"    - Resolved IP: {recon.target_ip}")
-         except Exception as e:
-            print(f"    [!] Resolution failed: {e}")
-            
-    if not recon.target_ip:
-        print("[!] FATAL: Could not resolve IP, Shodan check will fail.")
-        # Try anyway for verification
-        # return
-
-    # 2. Run Threat Intel Module
-    print("[*] Running Threat Intelligence Module...")
-    # Cleared old data...
-    # Clean up previous threat intel for this target to ensure fresh fetch
+    # Execute the scan
+    # This tests:
+    # 1. DatabaseManager connection
+    # 2. Target creation
+    # 3. PassiveRecon module instantiation and execution (WHOIS, DNS, etc.)
+    # 4. Error handling wrappers
     try:
-        conn = sqlite3.connect(config.DB_PATH)
-        conn.execute("DELETE FROM threat_intel WHERE target_id=?", (recon.target_id,))
-        conn.commit()
-        conn.close()
-        print("    - Cleared old threat intel data")
-    except:
-        pass
-
-    threat = ThreatIntelligence(recon.target, recon.target_id, recon.target_ip)
-    threat.execute()
-    
-    # 3. Generate Report
-    print("[*] Generating Report...")
-    reporter = ReportGenerator(target, recon.target_id)
-    html_path = reporter.generate_html()
-    
-    print(f"\n[SUCCESS] Verification Complete")
-    print(f"Report generated at: {html_path}")
-    print("Please open this report to verify detailed threat intelligence data is present.")
+        recon.execute()
+        print(f"\n[SUCCESS] ReconEngine.execute() completed without crashing.")
+    except Exception as e:
+        print(f"\n[FAIL] ReconEngine crashed: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    verify_fix()
+    verify_full_integration()

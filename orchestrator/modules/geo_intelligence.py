@@ -12,6 +12,7 @@ class GeoIntelligence:
     def __init__(self, target, target_id):
         self.target = target
         self.target_id = target_id
+        self.target_ip = None
         
     def get_target_ip(self):
         """Resolve target domain to IP address"""
@@ -99,6 +100,7 @@ class GeoIntelligence:
             print("    [!] Could not resolve IP address")
             return
         
+        self.target_ip = ip
         print(f"    - Resolved IP: {ip}")
         
         # Geolocation lookup

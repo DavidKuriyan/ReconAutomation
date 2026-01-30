@@ -17,6 +17,8 @@ class ThreatIntelligence:
         self.vt_api_key = config.VIRUSTOTAL_API_KEY
         self.shodan_api_key = config.SHODAN_API_KEY
         self.otx_api_key = config.OTX_API_KEY
+        self.censys_id = config.CENSYS_API_ID
+        self.censys_secret = config.CENSYS_API_SECRET
     
     def check_virustotal_domain(self):
         """Check domain reputation on VirusTotal"""
@@ -110,41 +112,58 @@ class ThreatIntelligence:
         
         return None
     
-    def check_otx(self):
-        """Check AlienVault OTX for threat intelligence"""
+    def check_censys(self):
+        """Check Censys for IP/domain intelligence"""
+        if not self.censys_id or not self.censys_secret:
+            print("    [!] Censys API credentials not fully configured")
+            return None
+            
         try:
-            from OTXv2 import OTXv2
-            
-            if not self.otx_api_key:
-                # OTX allows limited access without API key
-                print("    [!] OTX API key not configured, using limited access")
-                otx = OTXv2("")
-            else:
-                otx = OTXv2(self.otx_api_key)
-            
-            # Get domain reputation
-            from OTXv2 import IndicatorTypes
-            alerts = otx.get_indicator_details_full(IndicatorTypes.DOMAIN, self.target)
-            
-            if alerts:
-                general = alerts.get('general', {})
-                validation = alerts.get('validation', [])
+            # For IP intelligence (primary use case for Censys)
+            if self.ip_address:
+                url = f"https://search.censys.io/api/v2/hosts/{self.ip_address}"
+                auth = (self.censys_id, self.censys_secret)
+                res = requests.get(url, auth=auth, timeout=config.HTTP_TIMEOUT)
                 
-                return {
-                    'source': 'AlienVault OTX',
-                    'indicator_type': 'domain',
-                    'indicator_value': self.target,
-                    'pulse_count': general.get('pulse_info', {}).get('count', 0),
-                    'validation': validation,
-                    'reputation': general.get('reputation', 0)
-                }
-                
+                if res.status_code == 200:
+                    data = res.json().get('result', {})
+                    services = data.get('services', [])
+                    ports = [s.get('port') for s in services]
+                    
+                    return {
+                        'source': 'Censys',
+                        'indicator_type': 'ip',
+                        'indicator_value': self.ip_address,
+                        'services_count': len(services),
+                        'ports': ports,
+                        'autonomous_system': data.get('autonomous_system', {}),
+                        'location': data.get('location', {}),
+                        'last_updated': data.get('last_updated_at', '')
+                    }
+            
+            # For Domain (using name search)
+            url = f"https://search.censys.io/api/v2/hosts/search?q={self.target}"
+            auth = (self.censys_id, self.censys_secret)
+            res = requests.get(url, auth=auth, timeout=config.HTTP_TIMEOUT)
+            
+            if res.status_code == 200:
+                hits = res.json().get('result', {}).get('hits', [])
+                if hits:
+                    return {
+                        'source': 'Censys',
+                        'indicator_type': 'domain',
+                        'indicator_value': self.target,
+                        'hit_count': len(hits),
+                        'first_hit': hits[0] if hits else {},
+                        'summary': f"Found {len(hits)} related hosts"
+                    }
+                    
         except Exception as e:
-            print(f"    [!] OTX check failed: {e}")
-        
+            print(f"    [!] Censys check failed: {e}")
+            
         return None
-    
-    def calculate_threat_score(self, vt_data, shodan_data, otx_data):
+
+    def calculate_threat_score(self, vt_data, shodan_data, otx_data, censys_data=None):
         """Calculate overall threat score (0-100)"""
         score = 0
         
@@ -165,6 +184,11 @@ class ThreatIntelligence:
             pulses = otx_data.get('pulse_count', 0)
             if pulses > 0:
                 score += min(pulses * 2, 20)
+                
+        if censys_data:
+            # Censys points for exposed services/risk
+            if censys_data.get('services_count', 0) > 10:
+                score += 5
         
         return min(score, 100)
     
@@ -263,8 +287,19 @@ class ThreatIntelligence:
                     print(f"      ✓ No threat intelligence found")
                 self.store_threat_intel(otx_data)
         
+        # Censys check
+        if self.censys_id and self.censys_secret:
+            print("    - Checking Censys...")
+            censys_data = self.check_censys()
+            if censys_data:
+                if censys_data.get('ports'):
+                    print(f"      - Exposed ports: {', '.join(map(str, censys_data.get('ports', [])))}")
+                elif censys_data.get('hit_count'):
+                    print(f"      - Related hosts: {censys_data.get('hit_count')}")
+                self.store_threat_intel(censys_data)
+        
         # Calculate overall threat score
-        threat_score = self.calculate_threat_score(vt_data, shodan_data, otx_data)
+        threat_score = self.calculate_threat_score(vt_data, shodan_data, otx_data, censys_data)
         
         if threat_score > 0:
             print(f"    - Overall Threat Score: {threat_score}/100")
