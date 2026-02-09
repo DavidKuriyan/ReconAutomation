@@ -1,152 +1,232 @@
-# Argus OSINT Framework v2.0
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Python Version](https://img.shields.io/badge/python-3.8+-blue)
-![License](https://img.shields.io/badge/license-MIT-yellow)
-![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)
-![Status](https://img.shields.io/badge/status-active-success)
+Argus OSINT Framework v2.0
 
-A **professional-grade, ethical OSINT framework** with advanced intelligence gathering capabilities. Modular, safe, and robust.
 
-## 🌟 Key Features
+Argus is a professional-grade, ethical OSINT and reconnaissance framework designed for security research, blue team analysis, and authorized reconnaissance.
+It emphasizes modularity, safety, auditability, and real-world threat intelligence integration.
 
-### **1. Modular Architecture**
-- **Passive Recon**: Non-intrusive gathering (WHOIS, DNS, SSL, Subdomains).
-- **Active Recon**: Port scanning, service detection, directory enumeration.
-- **Threat Intel**: Integration with VirusTotal, Shodan, and AlienVault OTX.
-- **Breach Intel**: Checks against Have I Been Pwned and other databases.
+⚠️ Authorized use only. This framework is intended strictly for ethical security testing and research with proper permission.
 
-### **2. Safety & Ethics**
-- ✅ **Strict Consent Mechanism**: Requires explicit user confirmation.
-- ✅ **Audit Logging**: Tracks all actions for accountability.
-- ✅ **Defensive Coding**: Handles timeouts, rate limits, and API failures gracefully.
+🧠 Core Capabilities
+🔍 Passive Intelligence Gathering
 
-### **3. Reporting**
-- **Interactive HTML**: Searchable, sortable, and visually rich reports.
-- **Professional PDF**: Executive summaries and detailed technical findings.
+WHOIS & DNS intelligence
 
----
+Subdomain discovery
 
-## 🚀 Quick Start
+SSL certificate & infrastructure mapping
 
-### 1. Prerequisites
-- Python 3.8+
-- Git
+Historical endpoint discovery (Wayback)
 
-### 2. Installation
+⚙️ Active Reconnaissance (Optional & Controlled)
 
-```powershell
-# Navigate to repository
-cd "d:\Cyber security Projects\Reconnaissance"
+Port scanning
 
-# Install dependencies
-cd reporter
-pip install -r requirements.txt
-```
+Service fingerprinting
 
-### 3. Usage
+Directory enumeration
 
-**Interactive Menu (Recommended)**
-```powershell
-.\run_scan.bat
-```
+Rate-limited and configurable
 
-**CLI (Advanced)**
-```powershell
+🛡️ Threat Intelligence
+
+VirusTotal reputation analysis
+
+Shodan infrastructure intelligence
+
+AlienVault OTX threat pulses
+
+Censys certificate & exposure mapping
+
+🔎 Search Intelligence
+
+GitHub reconnaissance for:
+
+Exposed secrets
+
+Hardcoded credentials
+
+Configuration leaks
+
+Sensitive references
+
+📊 Reporting
+
+Interactive HTML dashboard
+
+Executive-ready PDF reports
+
+Structured SQLite result storage
+
+🛑 Safety, Ethics & Compliance
+
+✅ Explicit consent confirmation before scans
+
+✅ Full audit logging
+
+✅ Passive-by-default execution
+
+✅ Configurable rate limits
+
+❌ No exploitation modules
+
+❌ No credential brute-forcing
+
+❌ No bypass or evasion techniques
+
+This tool collects intelligence — it does not attack.
+
+🏗️ Architecture Overview
+┌──────────────┐
+│   User CLI   │
+└──────┬───────┘
+       │
+┌──────▼───────────┐
+│ Orchestrator     │
+│ (Workflow Engine)│
+└──────┬───────────┘
+       │
+┌──────▼──────────────────────────┐
+│ Intelligence Modules             │
+│ ├─ Passive Recon                 │
+│ ├─ Active Recon (optional)       │
+│ ├─ Threat Intelligence           │
+│ ├─ Search Intelligence           │
+│ └─ Geo / Metadata Analysis       │
+└──────┬──────────────────────────┘
+       │
+┌──────▼───────────┐
+│ Reporting Engine │
+│ (HTML / PDF)     │
+└──────────────────┘
+
+🚀 Quick Start
+📦 Requirements
+
+Python 3.8+
+
+Git
+
+Internet connection (for threat APIs)
+
+📥 Installation
+Windows (PowerShell)
+git clone https://github.com/DavidKuriyan/ReconAutomation.git
+cd ReconAutomation
+pip install -r reporter/requirements.txt
+
+Linux / macOS
+git clone https://github.com/DavidKuriyan/ReconAutomation.git
+cd ReconAutomation
+pip3 install -r reporter/requirements.txt
+
+▶️ Usage
+Interactive Mode (Recommended)
+run_scan.bat
+
+CLI Mode
 python orchestrator/orchestrator.py target.com --mode full
-```
 
----
 
-## 🔒 Security & Configuration
+Available modes:
 
-### API Keys
+passive
 
-Copy the template and add your API keys. **Never commit this file.**
+active
 
-```powershell
-copy .env.example .env.local
-```
+intel
 
-> **⚠️ SECURITY WARNING:** Ensure your `.env.local` file is listed in `.gitignore`. Do not share your API keys.
+full
 
-#### Supported APIs & Their Usage
+🔐 API Configuration
 
-| API | Purpose | Phase Used | Free Tier |
-|-----|---------|------------|-----------|
-| **VirusTotal** | Checks domain reputation against 60+ antivirus engines. Returns malicious/suspicious/clean status. | Threat Intelligence | 500 req/day |
-| **Shodan** | Discovers open ports, running services, CVEs, and infrastructure details for target IPs. | Threat Intelligence | 100 queries/mo |
-| **AlienVault OTX** | Checks if domain appears in community threat feeds (pulses) and provides reputation scores. | Threat Intelligence | Unlimited |
-| **GitHub** | Searches public repositories for exposed credentials, configs, or code mentioning the target. | Search Intelligence | 5000 req/hr |
-| **Censys** | Internet-wide scanning for exposed services, SSL certificates, and infrastructure mapping. | Threat Intelligence | 250 queries/mo |
-| **HIBP** | Checks if emails from the domain appear in known data breaches. | Breach Intelligence | Requires paid key |
+Create a local environment file:
 
-#### Where APIs Are Used
+cp .env.example .env.local
 
-```
-PHASE 1: PASSIVE RECONNAISSANCE
-    └── Threat Intelligence Assessment
-        ├── VirusTotal → Domain reputation
-        ├── Shodan → IP/port/CVE lookup  
-        ├── AlienVault OTX → Threat pulses
-        └── Censys → Infrastructure intel
 
-PHASE 3: SEARCH INTELLIGENCE
-    └── GitHub → Code/secret exposure search
-    
+⚠️ Never commit .env.local
+
+Supported APIs
+Service	Purpose	Free Tier
+VirusTotal	Domain/IP reputation	500 req/day
+Shodan	Ports, services, CVEs	Limited
+AlienVault OTX	Threat pulses	Unlimited
+Censys	Infra & certificates	Limited
+GitHub	Code intelligence	5000 req/hr
+HIBP	Breach intelligence	❌ Paid
+Where APIs Are Used
+PASSIVE / THREAT INTEL
+ ├─ VirusTotal
+ ├─ Shodan
+ ├─ AlienVault OTX
+ └─ Censys
+
+SEARCH INTELLIGENCE
+ └─ GitHub
+
 BREACH INTELLIGENCE
-    └── HIBP → Email breach lookup
-```
+ └─ Have I Been Pwned
 
-### Configuration
+⚙️ Configuration
 
-Edit `config.py` to adjust:
-- Rate limits (to prevent API bans)
-- Timeouts
-- Threading concurrency
-- Module toggles
+Edit orchestrator/config.py to control:
 
----
+API rate limits
 
-## 📁 Project Structure
+Timeouts
 
-```
-Reconnaissance/
+Concurrency
+
+Module enable/disable
+
+Scan safety thresholds
+
+📁 Project Structure
+ReconAutomation/
 ├── orchestrator/
-│   ├── orchestrator.py        # Main Coordinator & Engine
-│   ├── config.py              # Configuration Management
-│   └── modules/               # Intelligence Modules
-│       ├── active_recon.py    # [NEW] Active Scanning Logic
-│       ├── passive_recon.py   # [NEW] Passive Gathering Logic
-│       ├── threat_intel.py    # VirusTotal/Shodan/OTX Integration
-│       ├── geo_intelligence.py
-│       └── ...
+│   ├── orchestrator.py
+│   ├── config.py
+│   └── modules/
+│       ├── passive_recon.py
+│       ├── active_recon.py
+│       ├── threat_intel.py
+│       └── search_intel.py
 ├── reporter/
-│   ├── aether.db              # SQLite Database
-│   ├── reporter.py            # Dashboard App
-│   └── templates/             # Report Templates
-├── .env.example               # Config Template
-├── CONTRIBUTING.md            # [NEW] Developer Guidelines
-├── CODE_OF_CONDUCT.md         # [NEW] Community Standards
-└── ETHICAL_GUIDELINES.md      # Legal Framework
-```
+│   ├── reporter.py
+│   ├── aether.db
+│   └── templates/
+├── .env.example
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── ETHICAL_GUIDELINES.md
+└── LICENSE
 
----
+🤝 Contributing
 
-## 🤝 Community
+Contributions are welcome.
 
-We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
+Fork the repository
 
-- **Found a bug?** Open an issue.
-- **Have a feature idea?** Submit a request.
-- **Want to fix code?** Open a Pull Request.
+Create a feature branch
 
----
+Follow coding & ethics guidelines
 
-## 📝 License & Disclaimer
+Submit a Pull Request
 
-**MIT License** - See LICENSE file
+Please read:
 
-**Legal Disclaimer**: This tool is for authorized security testing only. The developers are NOT liable for misuse. Users are responsible for obtaining proper authorization and complying with applicable laws.
+CONTRIBUTING.md
 
-**By using Aether-Recon, you agree to use it ethically and legally.**
+CODE_OF_CONDUCT.md
+
+ETHICAL_GUIDELINES.md
+
+⚖️ License & Legal Disclaimer
+
+MIT License
+
+This framework is provided for educational and authorized security testing only.
+The developers assume no liability for misuse.
+
+By using Argus OSINT Framework, you agree to operate within legal and ethical boundaries.
