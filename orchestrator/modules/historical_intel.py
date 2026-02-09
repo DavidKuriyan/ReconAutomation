@@ -65,6 +65,39 @@ class HistoricalIntelligence:
             print(f"    [!] Wayback Machine check failed: {e}")
         
         return None
+
+    def extract_wayback_urls(self):
+        """Extract all unique URLs archived by Wayback Machine"""
+        urls = set()
+        print("    - extracting all archived URLs from Wayback Machine...")
+        try:
+            # CDX API to get all URLs for domain
+            # collapse=urlkey filters out duplicates to some extent
+            url = "https://web.archive.org/cdx/search/cdx"
+            params = {
+                'url': f"*.{self.target}/*",
+                'output': 'json',
+                'fl': 'original',
+                'collapse': 'urlkey'
+            }
+            
+            headers = {'User-Agent': config.USER_AGENT}
+            res = requests.get(url, params=params, headers=headers, timeout=30)
+            
+            if res.status_code == 200:
+                data = res.json()
+                if len(data) > 1:
+                    # Skip header
+                    for row in data[1:]:
+                        if row and len(row) > 0:
+                            urls.add(row[0])
+                    
+                    print(f"      ✓ Found {len(urls)} unique archived URLs")
+            
+        except Exception as e:
+            print(f"      [!] Failed to extract Wayback URLs: {e}")
+            
+        return urls
     
     def check_archive_today(self):
         """Check Archive.today for snapshots"""

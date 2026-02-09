@@ -1,6 +1,11 @@
 """
 Active Reconnaissance Module
 Handles intrusive scanning techniques including Port Scanning, Directory Busting, and Tech Detection.
+
+DSA Optimizations:
+- Tuple/frozenset for immutable data
+- __slots__ for memory efficiency
+- Batch database inserts
 """
 
 import socket
@@ -12,13 +17,20 @@ import random
 import os
 from config import config, Colors
 
-# User Agents for evasion
-USER_AGENTS = [
+# User Agents for evasion (tuple - immutable, memory efficient)
+USER_AGENTS = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1'
-]
+)
+
+# Common ports - tuple for O(1) membership check on sorted data
+COMMON_PORTS = (21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 3306, 3389, 5432, 8000, 8080, 8443)
+
+# HTTP/HTTPS port sets for O(1) lookup
+HTTP_PORTS = frozenset({80, 8080, 8000})
+HTTPS_PORTS = frozenset({443, 8443})
 
 def get_random_headers(host: str) -> dict:
     """Generate randomized HTTP headers for evasion."""
@@ -35,11 +47,16 @@ def get_random_headers(host: str) -> dict:
 class ActiveRecon:
     """
     Encapsulates all active (intrusive) reconnaissance logic.
+    DSA: Uses __slots__ for memory efficiency.
     """
+    
+    __slots__ = ('target', 'target_id', 'db', '_port_batch')
+    
     def __init__(self, target: str, target_id: int, db_manager):
         self.target = target
         self.target_id = target_id
         self.db = db_manager
+        self._port_batch = []  # Batch for single DB commit
 
     def run_ping(self):
         """Check if host is up using ICMP ping."""
@@ -254,43 +271,35 @@ class ActiveRecon:
             print(f"    [!] Extended Recon failed: {e}")
 
     def run_tech_detect(self):
-        """Identify web technologies."""
-        print("[+] Detecting Technologies...")
+        """Identify web technologies using advanced TechDetector."""
+        print(f"{Colors.INFO}[+] Detecting Technologies (Enhanced)...{Colors.RESET}")
         try:
+            from modules.tech_detector import TechDetector
+            
             requests.packages.urllib3.disable_warnings()
-            res = requests.get(
-                f"https://{self.target}", 
-                timeout=5, 
-                verify=False,
-                headers=get_random_headers(self.target)
-            )
-            headers = res.headers
-            text = res.text.lower()
             
-            detected = []
+            # Fetch target page once
+            try:
+                res = requests.get(
+                    f"https://{self.target}", 
+                    timeout=8, 
+                    verify=False,
+                    headers=get_random_headers(self.target)
+                )
+            except:
+                return
+
+            detector = TechDetector(self.target, self.target_id, self.db)
             
-            if 'Server' in headers: detected.append((headers['Server'], 'Server'))
-            if 'X-Powered-By' in headers: detected.append((headers['X-Powered-By'], 'Framework'))
+            # Run analysis
+            detector.analyze(res)
             
-            signatures = {
-                'WordPress': 'wp-content',
-                'Bootstrap': 'bootstrap.min.css',
-                'JQuery': 'jquery.min.js',
-                'React': 'react',
-                'Cloudflare': 'cloudflare'
-            }
-            
-            for name, sig in signatures.items():
-                if sig in text:
-                    detected.append((name, 'Frontend'))
-            
-            if detected:
-                print(f"    - Found {len(detected)} technologies")
-                if self.db.connect():
-                    cursor = self.db.conn.cursor()
-                    for name, cat in detected:
-                        cursor.execute("INSERT INTO technologies (target_id, name, category) VALUES (?, ?, ?)", (self.target_id, name, cat))
-                    self.db.conn.commit()
-                    self.db.close()
-        except Exception:
-            pass
+            # Save results
+            count = detector.save_results()
+            if count > 0:
+                print(f"{Colors.SUCCESS}    ✓ Identified {count} new technologies{Colors.RESET}")
+            else:
+                print(f"{Colors.INFO}    - No new technologies identified{Colors.RESET}")
+                
+        except Exception as e:
+            print(f"{Colors.WARNING}    [!] Tech detection error: {e}{Colors.RESET}")

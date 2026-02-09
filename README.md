@@ -61,15 +61,45 @@ python orchestrator/orchestrator.py target.com --mode full
 ## 🔒 Security & Configuration
 
 ### API Keys
+
 Copy the template and add your API keys. **Never commit this file.**
 
 ```powershell
-copy .env.example .env
+copy .env.example .env.local
 ```
 
-> **⚠️ SECURITY WARNING:** Ensure your `.env` file is listed in `.gitignore`. Do not share your API keys.
+> **⚠️ SECURITY WARNING:** Ensure your `.env.local` file is listed in `.gitignore`. Do not share your API keys.
+
+#### Supported APIs & Their Usage
+
+| API | Purpose | Phase Used | Free Tier |
+|-----|---------|------------|-----------|
+| **VirusTotal** | Checks domain reputation against 60+ antivirus engines. Returns malicious/suspicious/clean status. | Threat Intelligence | 500 req/day |
+| **Shodan** | Discovers open ports, running services, CVEs, and infrastructure details for target IPs. | Threat Intelligence | 100 queries/mo |
+| **AlienVault OTX** | Checks if domain appears in community threat feeds (pulses) and provides reputation scores. | Threat Intelligence | Unlimited |
+| **GitHub** | Searches public repositories for exposed credentials, configs, or code mentioning the target. | Search Intelligence | 5000 req/hr |
+| **Censys** | Internet-wide scanning for exposed services, SSL certificates, and infrastructure mapping. | Threat Intelligence | 250 queries/mo |
+| **HIBP** | Checks if emails from the domain appear in known data breaches. | Breach Intelligence | Requires paid key |
+
+#### Where APIs Are Used
+
+```
+PHASE 1: PASSIVE RECONNAISSANCE
+    └── Threat Intelligence Assessment
+        ├── VirusTotal → Domain reputation
+        ├── Shodan → IP/port/CVE lookup  
+        ├── AlienVault OTX → Threat pulses
+        └── Censys → Infrastructure intel
+
+PHASE 3: SEARCH INTELLIGENCE
+    └── GitHub → Code/secret exposure search
+    
+BREACH INTELLIGENCE
+    └── HIBP → Email breach lookup
+```
 
 ### Configuration
+
 Edit `config.py` to adjust:
 - Rate limits (to prevent API bans)
 - Timeouts

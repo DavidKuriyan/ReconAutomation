@@ -1,0 +1,348 @@
+ datacenter.html
+ datacenter.html-backup
+ datacenter.html-dev
+ datacenter.html-old
+ datacenter.html-test
+.get("highlight")
+.get("now")
+.get("now")-backup
+.get("now")-dev
+.get("now")-old
+.get("now")-test
+.get("view")
+.get("view")-backup
+.get("view")-dev
+.get("view")-old
+.get("view")-test
+2000
+5c5dd728
+5c5dd728-backup
+5c5dd728-dev
+5c5dd728-old
+5c5dd728-test
+AI.html
+AI.html-backup
+AI.html-dev
+AI.html-old
+AI.html-test
+AIML.html
+Anna_University_Logo.svg.png
+BAEKAAEALAAA
+COE
+CSBS.html
+CSE.html
+CSE.html-backup
+CSE.html-dev
+CSE.html-old
+CSE.html-test
+CYBER.html
+CYBER.html-backup
+CYBER.html-dev
+CYBER.html-old
+CYBER.html-test
+Dote.html
+Dote.html-backup
+Dote.html-dev
+Dote.html-old
+Dote.html-test
+ECE.html
+EEE.html
+Events
+Foi.html
+Grievance-Redressal-Cell.html
+Help Desk Display Board.pdf
+IIIC.html
+IIIC.html-backup
+IIIC.html-dev
+IIIC.html-old
+IIIC.html-test
+IPRCell.html
+IT.html
+Income&Expenditure.pdf
+Income&Expenditure.pdf-backup
+Income&Expenditure.pdf-dev
+Income&Expenditure.pdf-old
+Income&Expenditure.pdf-test
+Library.html
+Library.html-backup
+Library.html-dev
+Library.html-old
+Library.html-test
+MECH.html
+MECH.html.html
+MECH.html.html-backup
+MECH.html.html-dev
+MECH.html.html-old
+MECH.html.html-test
+NBA.html
+Naac.html
+National Conference - Chemistry.pdf
+National Conference - front.jpg
+National Conference - front.jpg-backup
+National Conference - front.jpg-dev
+National Conference - front.jpg-old
+National Conference - front.jpg-test
+PED.html
+PED.html-backup
+PED.html-dev
+PED.html-old
+PED.html-test
+SETE Nov'25 - PG.pdf
+SETE Nov'25 ODD - UG (R 2025).pdf
+SETE Nov'25 ODD - UG (R 2025).pdf-backup
+SETE Nov'25 ODD - UG (R 2025).pdf-dev
+SETE Nov'25 ODD - UG (R 2025).pdf-old
+SETE Nov'25 ODD - UG (R 2025).pdf-test
+SETE Nov25 ODD- UG.pdf
+SSMIET-Outreach.html
+UNDERTAKING FORM FOR INTERNSHIP.pdf
+admin.html
+agccell.html
+agccell.html-backup
+agccell.html-dev
+agccell.html-old
+agccell.html-test
+ai1.jpg
+ai1.jpg-backup
+ai1.jpg-dev
+ai1.jpg-old
+ai1.jpg-test
+aicte.png
+aicte.png-backup
+aicte.png-dev
+aicte.png-old
+aicte.png-test
+aicte_.html
+aishe.html
+aishe.png
+alumni association.html
+alumni association.html-backup
+alumni association.html-dev
+alumni association.html-old
+alumni association.html-test
+annaapproval.html
+bootstrap.css
+bootstrap.min.js
+build club.html
+cc.html
+cc.html-backup
+cc.html-dev
+cc.html-old
+cc.html-test
+cdn-cgi
+cgpa calc
+chemistry.html
+civil.html
+cloudflare-static
+communication system.html
+communication system.html-backup
+communication system.html-dev
+communication system.html-old
+communication system.html-test
+contact-us.html
+course
+course-details.html
+css
+custom.js
+custom.js-backup
+custom.js-dev
+custom.js-old
+custom.js-test
+datacenter.html
+datacenter.html-backup
+datacenter.html-dev
+datacenter.html-old
+datacenter.html-test
+dote.png
+edc1.html
+email-decode.min.js
+eng.html
+erpnew.html
+fav.ico
+feedback.html
+font-awesome.min.css
+gallery-photo.html
+h-ic4.png
+higherstudies.html
+humane league.html
+icon
+iete.html
+iete.html-backup
+iete.html-dev
+iete.html-old
+iete.html-test
+image-768x768.png
+images
+index-2.html
+index.html
+innovators club.html
+institution innovation council.html
+intership
+iqac.html
+iqac.png
+lGODlhAQABAIABAP
+lGODlhAQABAIABAP-backup
+lGODlhAQABAIABAP-dev
+lGODlhAQABAIABAP-old
+lGODlhAQABAIABAP-test
+lifeatssm.html
+logo.png
+main.min.js
+mandatorydiscloser.html
+mandatorydiscloser.html-backup
+mandatorydiscloser.html-dev
+mandatorydiscloser.html-old
+mandatorydiscloser.html-test
+mat.html
+materialize.css
+materialize.min.js
+materialize.min.js-backup
+materialize.min.js-dev
+materialize.min.js-old
+materialize.min.js-test
+math.html
+mission.jpg
+mission.jpg-backup
+mission.jpg-dev
+mission.jpg-old
+mission.jpg-test
+naac.png
+national service scheme.html
+nba.png
+nba.png-backup
+nba.png-dev
+nba.png-old
+nba.png-test
+ndli club.html
+new course.jpg
+nirf.html
+nirf.png
+nirf.png-backup
+nirf.png-dev
+nirf.png-old
+nirf.png-test
+online payment.html
+pdf
+pdf-backup
+pdf-dev
+pdf-old
+pdf-test
+phone.png
+physics.html
+physics.html-backup
+physics.html-dev
+physics.html-old
+physics.html-test
+placements.html
+policies.pdf
+policies.pdf-backup
+policies.pdf-dev
+policies.pdf-old
+policies.pdf-test
+research cell.html
+research cell.html-backup
+research cell.html-dev
+research cell.html-old
+research cell.html-test
+research.html
+research.png
+rotaract.html
+scienceandhumanities.html
+scripts
+scripts-backup
+scripts-dev
+scripts-old
+scripts-test
+scst.html
+scst.html-backup
+scst.html-dev
+scst.html-old
+scst.html-test
+sip.html
+slide1.jpg
+slider
+sm-1.jpg
+sm-1.jpg-backup
+sm-1.jpg-dev
+sm-1.jpg-old
+sm-1.jpg-test
+sm-2.jpg
+sm-3.jpg
+sm-4.jpg
+sm-4.jpg-backup
+sm-4.jpg-dev
+sm-4.jpg-old
+sm-4.jpg-test
+sm-5.jpg
+sm-5.jpg-backup
+sm-5.jpg-dev
+sm-5.jpg-old
+sm-5.jpg-test
+sm-6.jpg
+sm-6.jpg-backup
+sm-6.jpg-dev
+sm-6.jpg-old
+sm-6.jpg-test
+sm-7.jpg
+sm-7.jpg-backup
+sm-7.jpg-dev
+sm-7.jpg-old
+sm-7.jpg-test
+sm-8.jpg
+sm-9.jpg
+space club.html
+space club.html-backup
+space club.html-dev
+space club.html-old
+space club.html-test
+ssmhilt.html
+ssmlogo.png
+staffscount.html
+startup club.html
+studentscount.html
+style-mob.css
+style-mob.css-backup
+style-mob.css-dev
+style-mob.css-old
+style-mob.css-test
+style.css
+style.css-backup
+style.css-dev
+style.css-old
+style.css-test
+svg
+tamil.html
+tamizh mandram.html
+tamizh mandram.html-backup
+tamizh mandram.html-dev
+tamizh mandram.html-old
+tamizh mandram.html-test
+thermal.html
+ubafinal.html
+ugc.html
+ugc.html-backup
+ugc.html-dev
+ugc.html-old
+ugc.html-test
+ugc.png
+ugc.png-backup
+ugc.png-dev
+ugc.png-old
+ugc.png-test
+vision.jpg
+vision.jpg-backup
+vision.jpg-dev
+vision.jpg-old
+vision.jpg-test
+wAAACH
+women empowerment cell.html
+women empowerment cell.html-backup
+women empowerment cell.html-dev
+women empowerment cell.html-old
+women empowerment cell.html-test
+yoga.html
+youth red cross.html
+youth red cross.html-backup
+youth red cross.html-dev
+youth red cross.html-old
+youth red cross.html-test

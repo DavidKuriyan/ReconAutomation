@@ -29,6 +29,7 @@ from modules.reporting import ReportGenerator
 # New Modular Imports
 from modules.passive_recon import PassiveRecon
 from modules.active_recon import ActiveRecon
+from modules.web_analysis import WebAnalysis
 
 # Configuration
 DB_PATH = "../reporter/argus.db"
@@ -177,7 +178,7 @@ class ReconEngine:
     def should_run(self, module_type: str) -> bool:
         """Determine if a module should run based on the selected scan mode."""
         if self.scan_mode == 'full': return True
-        if self.scan_mode == 'active': return module_type in ['active', 'search', 'threat']
+        if self.scan_mode == 'active': return module_type in ['active', 'search', 'threat', 'web']
         if self.scan_mode == 'passive': return module_type in ['passive', 'geo', 'email', 'meta']
         if self.scan_mode == 'custom': return module_type in self.custom_modules
         return False
@@ -359,6 +360,13 @@ class ReconEngine:
             print("="*50)
             search = SearchIntelligence(self.target, self.target_id)
             self.execution_wrapper(search.execute, "Search Intelligence")
+
+        # 7. Phase 4: Web Analysis
+        if self.should_run('web') and config.ENABLE_WEB_ANALYSIS:
+            print(f"\n{Colors.HEADER}PHASE 4: WEB ANALYSIS{Colors.RESET}")
+            print("="*50)
+            web = WebAnalysis(self.target, self.target_id, self.db)
+            self.execution_wrapper(web.execute, "Web Analysis")
 
         # 7. Finalization
         print(f"\n{Colors.SUCCESS}✓ SCAN COMPLETED SUCCESSFULLY{Colors.RESET}")

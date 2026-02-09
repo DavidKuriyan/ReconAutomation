@@ -1,6 +1,11 @@
 """
 Passive Reconnaissance Module
 Handles non-intrusive information gathering techniques including WHOIS, DNS, SSL, and Subdomain discovery.
+
+DSA Optimizations:
+- LRU caching for DNS lookups
+- Frozenset for immutable record types
+- Set-based subdomain storage
 """
 
 import socket
@@ -8,20 +13,25 @@ import ssl
 import OpenSSL
 import concurrent.futures
 import subprocess
+import shutil
 import requests
 import dns.resolver
 import re
 import random
 import os
+from functools import lru_cache
 from config import config, Colors
 
+# Immutable record types (frozenset for O(1) membership)
+DNS_RECORD_TYPES = frozenset(['A', 'NS', 'MX', 'TXT', 'SOA'])
+
 # User Agents for evasion
-USER_AGENTS = [
+USER_AGENTS = (  # Tuple is more memory efficient than list for immutable data
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1'
-]
+)
 
 def get_random_headers(host: str) -> dict:
     """Generate randomized HTTP headers for evasion."""
@@ -168,35 +178,81 @@ class PassiveRecon:
             print(f"[!] SSL Error: {e}")
 
     def run_subdomain_discovery(self):
-        """Discover subdomains using Subfinder and crt.sh."""
-        print("[+] Running Subdomain Discovery...")
+        """Discover subdomains using multiple passive sources."""
+        print(f"{Colors.INFO}[+] Running Enhanced Subdomain Discovery (25+ sources)...{Colors.RESET}")
         subdomains = set()
         
-        # 1. Try Subfinder
+        # Import PassiveSources and ExternalTools
         try:
-            subprocess.run(["subfinder", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-            print("    - Mode: Subfinder")
-            cmd = ["subfinder", "-d", self.target, "-silent"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            for line in result.stdout.split('\n'):
-                if line.strip(): subdomains.add(line.strip())
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            print("    - Mode: crt.sh (Passive Fallback)")
-            # 2. Fallback to crt.sh
-            try:
-                url = f"https://crt.sh/?q=%25.{self.target}&output=json"
-                res = requests.get(url, timeout=10)
-                if res.status_code == 200:
-                    data = res.json()
-                    for entry in data:
-                        name_value = entry['name_value']
-                        for sub in name_value.split('\n'):
-                            if "*" not in sub:
-                                subdomains.add(sub.strip())
-            except Exception as e:
-                print(f"    [!] crt.sh failed: {e}")
+            from modules.passive_sources import PassiveSources
+            from modules.external_tools import ExternalTools
+            
+            ps = PassiveSources(self.target)
+            
+            # Run all free sources in parallel
+            print("    - Running free sources...")
+            free_subs, free_count = ps.run_all_free()
+            subdomains.update(free_subs)
+            print(f"    - Free sources: {len(free_subs)} subdomains from {free_count} sources")
 
-        print(f"    - Found {len(subdomains)} subdomains")
+            # Run External Tools (Amass)
+            if shutil.which("amass"):
+                et = ExternalTools(self.target)
+                amass_subs = et.run_amass_passive()
+                subdomains.update(amass_subs)
+            
+            # Run API-based sources if keys are configured
+            api_keys = {
+                'VIRUSTOTAL_API_KEY': config.VIRUSTOTAL_API_KEY,
+                'SHODAN_API_KEY': config.SHODAN_API_KEY,
+                'CENSYS_API_ID': config.CENSYS_API_ID,
+                'CENSYS_API_SECRET': config.CENSYS_API_SECRET,
+                'SECURITYTRAILS_API_KEY': getattr(config, 'SECURITYTRAILS_API_KEY', ''),
+                'FULLHUNT_API_KEY': getattr(config, 'FULLHUNT_API_KEY', ''),
+                'LEAKIX_API_KEY': getattr(config, 'LEAKIX_API_KEY', ''),
+                'URLSCAN_API_KEY': getattr(config, 'URLSCAN_API_KEY', ''),
+                'CHAOS_API_KEY': getattr(config, 'CHAOS_API_KEY', ''),
+                'BRAVE_API_KEY': getattr(config, 'BRAVE_API_KEY', ''),
+                'NETLAS_API_KEY': getattr(config, 'NETLAS_API_KEY', ''),
+                'ZOOMEYE_API_KEY': getattr(config, 'ZOOMEYE_API_KEY', ''),
+                'ONYPHE_API_KEY': getattr(config, 'ONYPHE_API_KEY', ''),
+                'CRIMINALIP_API_KEY': getattr(config, 'CRIMINALIP_API_KEY', ''),
+            }
+            
+            # Check if any API keys are configured
+            has_api_keys = any(v for v in api_keys.values())
+            if has_api_keys:
+                print("    - Running API sources...")
+                api_subs, api_count = ps.run_with_apis(api_keys)
+                subdomains.update(api_subs)
+                print(f"    - API sources: {len(api_subs)} subdomains from {api_count} sources")
+                
+        except ImportError as e:
+            print(f"    [!] PassiveSources not available, using fallback: {e}")
+            # Fallback to Subfinder
+            try:
+                subprocess.run(["subfinder", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                print("    - Mode: Subfinder")
+                cmd = ["subfinder", "-d", self.target, "-silent"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                for line in result.stdout.split('\n'):
+                    if line.strip(): subdomains.add(line.strip())
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                print("    - Mode: crt.sh (Passive Fallback)")
+                try:
+                    url = f"https://crt.sh/?q=%25.{self.target}&output=json"
+                    res = requests.get(url, timeout=10)
+                    if res.status_code == 200:
+                        data = res.json()
+                        for entry in data:
+                            name_value = entry['name_value']
+                            for sub in name_value.split('\n'):
+                                if "*" not in sub:
+                                    subdomains.add(sub.strip())
+                except Exception as e:
+                    print(f"    [!] crt.sh failed: {e}")
+
+        print(f"    - Total: {len(subdomains)} unique subdomains")
 
         # Resolve IPs
         if subdomains:
@@ -206,20 +262,17 @@ class PassiveRecon:
             resolver.timeout = 2
             resolver.lifetime = 2
             
-            for sub in subdomains:
+            for sub in list(subdomains)[:100]:  # Limit to 100 for speed
                 ip = "N/A"
-                # 1. Try default resolver
                 try:
                     answers = resolver.resolve(sub, 'A')
                     ip = answers[0].to_text()
                 except:
-                    # 2. Try Public DNS (Google)
                     try:
                         resolver.nameservers = ['8.8.8.8', '8.8.4.4']
                         answers = resolver.resolve(sub, 'A')
                         ip = answers[0].to_text()
                     except:
-                        # 3. Fallback to system socket
                         try:
                             ip = socket.gethostbyname(sub)
                         except:
@@ -252,7 +305,20 @@ class PassiveRecon:
         print("[+] Running Email Harvesting (TheHarvester-Lite)...")
         emails = set()
         
-        # 1. Scrape Homepage
+        # 1. External Tools (theHarvester)
+        try:
+            from modules.external_tools import ExternalTools
+            if shutil.which("theHarvester"):
+                et = ExternalTools(self.target)
+                h_emails, h_subs = et.run_theharvester()
+                emails.update(h_emails)
+                # We can also add subdomains found by theHarvester if we want, 
+                # but this method returns emails. Ideally we should run this earlier or store them.
+                # For now just adding emails.
+        except Exception as e:
+            print(f"    [!] theHarvester failed: {e}")
+
+        # 2. Scrape Homepage
         try:
             requests.packages.urllib3.disable_warnings()
             res = requests.get(

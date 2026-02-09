@@ -28,6 +28,11 @@ class SearchIntelligence:
             f'site:{self.target} ext:sql OR ext:log',
             f'site:{self.target} ext:env OR ext:config',
             f'site:{self.target} "index of"',
+            # GitHub Dorks
+            f'site:github.com "{self.target}"',
+            f'site:github.com "{self.target}" password',
+            f'site:github.com "{self.target}" api_key',
+            f'site:github.com "{self.target}" secret',
         ]
         
         print(f"    - Executing {len(dorks)} Google Dorks...")
@@ -90,7 +95,10 @@ class SearchIntelligence:
                     # Search code
                     code_results = g.search_code(query, order='desc')
                     
-                    for item in code_results[:5]:  # First 5 results
+                    count = 0
+                    for item in code_results:
+                        if count >= 5:
+                            break
                         results.append({
                             'source': 'GitHub',
                             'search_type': 'code',
@@ -100,6 +108,7 @@ class SearchIntelligence:
                             'snippet': item.repository.description or '',
                             'risk_level': 'High' if 'password' in query or 'secret' in query else 'Medium'
                         })
+                        count += 1
                     
                     time.sleep(2)  # Rate limiting
                     

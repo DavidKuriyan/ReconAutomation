@@ -10,6 +10,8 @@ from .metadata_extractor import MetadataExtractor
 from .historical_intel import HistoricalIntelligence
 from .search_intel import SearchIntelligence
 from .reporting import ReportGenerator
+from .web_analysis import WebAnalysis
+from .passive_sources import PassiveSources
 
 __all__ = [
     'GeoIntelligence',
@@ -19,5 +21,7 @@ __all__ = [
     'MetadataExtractor',
     'HistoricalIntelligence',
     'SearchIntelligence',
-    'ReportGenerator'
+    'ReportGenerator',
+    'WebAnalysis',
+    'PassiveSources'
 ]

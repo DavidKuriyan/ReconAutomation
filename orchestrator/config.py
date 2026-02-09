@@ -29,6 +29,24 @@ class Config:
     CENSYS_API_ID = os.getenv('CENSYS_API_ID', '')
     CENSYS_API_SECRET = os.getenv('CENSYS_API_SECRET', '')
     
+    # Passive Recon API Keys
+    SECURITYTRAILS_API_KEY = os.getenv('SECURITYTRAILS_API_KEY', '')
+    FULLHUNT_API_KEY = os.getenv('FULLHUNT_API_KEY', '')
+    INTELX_API_KEY = os.getenv('INTELX_API_KEY', '')
+    LEAKIX_API_KEY = os.getenv('LEAKIX_API_KEY', '')
+    NETLAS_API_KEY = os.getenv('NETLAS_API_KEY', '')
+    URLSCAN_API_KEY = os.getenv('URLSCAN_API_KEY', '')
+    CHAOS_API_KEY = os.getenv('CHAOS_API_KEY', '')
+    BRAVE_API_KEY = os.getenv('BRAVE_API_KEY', '')
+    ZOOMEYE_API_KEY = os.getenv('ZOOMEYE_API_KEY', '')
+    ONYPHE_API_KEY = os.getenv('ONYPHE_API_KEY', '')
+    CRIMINALIP_API_KEY = os.getenv('CRIMINALIP_API_KEY', '')
+    FOFA_EMAIL = os.getenv('FOFA_EMAIL', '')
+    FOFA_API_KEY = os.getenv('FOFA_API_KEY', '')
+    HUNTER_API_KEY = os.getenv('HUNTER_API_KEY', '')
+    TOMBA_API_KEY = os.getenv('TOMBA_API_KEY', '')
+    TOMBA_SECRET = os.getenv('TOMBA_SECRET', '')
+    
     # Rate Limiting (requests per second)
     RATE_LIMIT_GLOBAL = float(os.getenv('RATE_LIMIT_GLOBAL', '2.0'))
     RATE_LIMIT_VIRUSTOTAL = float(os.getenv('RATE_LIMIT_VIRUSTOTAL', '0.25'))  # 4/min on free tier
@@ -44,6 +62,19 @@ class Config:
     ENABLE_METADATA = os.getenv('ENABLE_METADATA', 'true').lower() == 'true'
     ENABLE_HISTORICAL = os.getenv('ENABLE_HISTORICAL', 'true').lower() == 'true'
     ENABLE_SEARCH_INTEL = os.getenv('ENABLE_SEARCH_INTEL', 'true').lower() == 'true'
+    ENABLE_WEB_ANALYSIS = os.getenv('ENABLE_WEB_ANALYSIS', 'true').lower() == 'true'
+    
+    # Web Analysis Tool Paths (optional overrides)
+    HTTPX_PATH = os.getenv('HTTPX_PATH', 'httpx')
+    NUCLEI_PATH = os.getenv('NUCLEI_PATH', 'nuclei')
+    KATANA_PATH = os.getenv('KATANA_PATH', 'katana')
+    FFUF_PATH = os.getenv('FFUF_PATH', 'ffuf')
+    ARJUN_PATH = os.getenv('ARJUN_PATH', 'arjun')
+    GRPCURL_PATH = os.getenv('GRPCURL_PATH', 'grpcurl')
+    
+    # Web Analysis Settings
+    RATE_LIMIT_WEB_ANALYSIS = float(os.getenv('RATE_LIMIT_WEB_ANALYSIS', '5.0'))
+    MAX_WORKERS_WEB_ANALYSIS = int(os.getenv('MAX_WORKERS_WEB_ANALYSIS', '10'))
     
     # Timeouts (seconds)
     HTTP_TIMEOUT = int(os.getenv('HTTP_TIMEOUT', '10'))

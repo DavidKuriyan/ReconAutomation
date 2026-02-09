@@ -78,16 +78,27 @@ class ReportGenerator:
         cursor.execute("SELECT DISTINCT path, status_code FROM directories WHERE target_id=? ORDER BY status_code", (self.target_id,))
         data['directories'] = [dict(row) for row in cursor.fetchall()]
 
-        # Security Findings (New - Headers, SMTP, etc) - Deduplicated by Title to remove timestamp variations
+        # Security Findings - Deduplicated by Title
         cursor.execute("SELECT title, severity, description, url FROM findings WHERE target_id=? GROUP BY title", (self.target_id,))
-        data['findings'] = [dict(row) for row in cursor.fetchall()]
+        all_findings = [dict(row) for row in cursor.fetchall()]
+        
+        # Separate Web Analysis findings from other findings by title prefix
+        data['findings'] = [f for f in all_findings if not f.get('title', '').startswith('[Web Analysis]')]
+        data['web_analysis'] = [f for f in all_findings if f.get('title', '').startswith('[Web Analysis]')]
 
-        # Threat Intel (Enhanced)
+        # Threat Intel (Enhanced & Deduplicated)
         try:
             # Fetch all columns including additional_data JSON
-            cursor.execute("SELECT * FROM threat_intel WHERE target_id=?", (self.target_id,))
+            cursor.execute("""
+                SELECT * FROM threat_intel 
+                WHERE target_id=? 
+                ORDER BY id DESC
+            """, (self.target_id,))
             rows = cursor.fetchall()
+            
             threat_intel = []
+            seen_fingerprints = set()
+            
             for row in rows:
                 item = dict(row)
                 # Parse JSON data if available
@@ -99,7 +110,33 @@ class ReportGenerator:
                         item['details'] = {}
                 except:
                     item['details'] = {}
-                threat_intel.append(item)
+                
+                # Content-Based Deduplication Fingerprint
+                # Create a unique signature based on the FINDINGS, not the IP
+                # Fields: Source, Open Ports (sorted), Vulns (sorted), ISP, ASN, Threat Score
+                
+                details = item.get('details', {})
+                
+                # Handle lists which can be unhashable
+                ports = tuple(sorted(details.get('ports', []))) if isinstance(details.get('ports'), list) else ()
+                vulns = tuple(sorted(details.get('vulns', []))) if isinstance(details.get('vulns'), list) else ()
+                tags = tuple(sorted(details.get('tags', []))) if isinstance(details.get('tags'), list) else ()
+                
+                fingerprint = (
+                    item.get('source'),
+                    item.get('threat_score'),
+                    ports,
+                    vulns,
+                    details.get('isp'),
+                    details.get('asn'),
+                    tags
+                )
+                
+                # If we haven't seen this exact set of findings before, add it
+                if fingerprint not in seen_fingerprints:
+                    seen_fingerprints.add(fingerprint)
+                    threat_intel.append(item)
+                
             data['threat_intel'] = threat_intel
         except: data['threat_intel'] = []
 
@@ -304,6 +341,30 @@ class ReportGenerator:
                     <td>{{ item.title }}</td>
                     <td>
                         <span class="badge {% if item.severity == 'High' or item.severity == 'Critical' %}badge-high{% elif item.severity == 'Medium' %}badge-med{% else %}badge-low{% endif %}">
+                            {{ item.severity }}
+                        </span>
+                    </td>
+                    <td>{{ item.description }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+
+        {% if data.web_analysis %}
+        <div class="section">
+            <div class="section-title">Web Analysis Findings</div>
+            <table>
+                <tr>
+                    <th>Finding</th>
+                    <th>Severity</th>
+                    <th>Details</th>
+                </tr>
+                {% for item in data.web_analysis %}
+                <tr>
+                    <td>{{ item.title }}</td>
+                    <td>
+                        <span class="badge {% if item.severity == 'High' or item.severity == 'Critical' %}badge-high{% elif item.severity == 'Medium' %}badge-med{% else %}badge-info{% endif %}">
                             {{ item.severity }}
                         </span>
                     </td>

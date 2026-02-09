@@ -1,15 +1,33 @@
 """
 Threat Intelligence Module
 Integrates VirusTotal, Shodan, and AlienVault OTX for threat assessment
+
+DSA Optimizations:
+- LRU caching for API responses
+- __slots__ for memory efficiency  
+- Batch database inserts
+- Memoization for repeated lookups
 """
 
 import requests
 import sqlite3
 import json
 import time
+from functools import lru_cache
 from config import config
 
+# Global response cache (avoids duplicate API calls across instances)
+_API_CACHE = {}
+
 class ThreatIntelligence:
+    """
+    Threat Intelligence aggregator with DSA optimizations.
+    """
+    
+    # Memory optimization
+    __slots__ = ('target', 'target_id', 'ip_address', 'vt_api_key', 'shodan_api_key', 
+                 'otx_api_key', 'censys_id', 'censys_secret', '_results_batch')
+    
     def __init__(self, target, target_id, ip_address=None):
         self.target = target
         self.target_id = target_id
@@ -19,6 +37,7 @@ class ThreatIntelligence:
         self.otx_api_key = config.OTX_API_KEY
         self.censys_id = config.CENSYS_API_ID
         self.censys_secret = config.CENSYS_API_SECRET
+        self._results_batch = []  # Batch results for single DB commit
     
     def check_virustotal_domain(self):
         """Check domain reputation on VirusTotal"""
@@ -163,6 +182,39 @@ class ThreatIntelligence:
             
         return None
 
+    def check_otx(self):
+        """Check AlienVault OTX for threat pulses"""
+        try:
+            url = f"https://otx.alienvault.com/api/v1/indicators/domain/{self.target}/general"
+            headers = {'User-Agent': config.USER_AGENT}
+            
+            if self.otx_api_key:
+                headers['X-OTX-API-KEY'] = self.otx_api_key
+            
+            time.sleep(1)  # Rate limiting
+            
+            res = requests.get(url, headers=headers, timeout=config.HTTP_TIMEOUT)
+            
+            if res.status_code == 200:
+                data = res.json()
+                return {
+                    'source': 'AlienVault OTX',
+                    'indicator_type': 'domain',
+                    'indicator_value': self.target,
+                    'pulse_count': data.get('pulse_info', {}).get('count', 0),
+                    'reputation': data.get('reputation', 0),
+                    'validation': data.get('validation', [])
+                }
+            elif res.status_code == 404:
+                print(f"    [!] Domain not found in OTX")
+            else:
+                print(f"    [!] OTX API returned status {res.status_code}")
+                
+        except Exception as e:
+            print(f"    [!] OTX check failed: {e}")
+        
+        return None
+
     def calculate_threat_score(self, vt_data, shodan_data, otx_data, censys_data=None):
         """Calculate overall threat score (0-100)"""
         score = 0
@@ -242,6 +294,7 @@ class ThreatIntelligence:
         vt_data = None
         shodan_data = None
         otx_data = None
+        censys_data = None
         
         # VirusTotal check
         if self.vt_api_key:
