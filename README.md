@@ -52,21 +52,7 @@ It emphasizes modularity, safety, auditability, and real-world threat intelligen
 
 ## 🏗️ Architecture Overview
 
-```mermaid
-graph TD
-    UserCLI[User CLI] --> Orchestrator
-    Orchestrator[Orchestrator<br>(Workflow Engine)] --> IntelModules
-    subgraph IntelModules[Intelligence Modules]
-        Passive[Passive Recon]
-        Active[Active Recon (optional)]
-        Threat[Threat Intelligence]
-        Search[Search Intelligence]
-        Geo[Geo / Metadata Analysis]
-    end
-    IntelModules --> Reporting[Reporting Engine<br>(HTML / PDF)]
-```
-
-*Alternative Text View:*
+*Text View:*
 ```text
 ┌──────────────┐
 │   User CLI   │
