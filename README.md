@@ -1,5 +1,7 @@
 
-Argus OSINT Framework v2.0
+# 🔎 Argus OSINT Framework  
+### 📡 Discover • Analyze • Report — Ethically
+
 
 
 Argus is a professional-grade, ethical OSINT and reconnaissance framework designed for security research, blue team analysis, and authorized reconnaissance.
