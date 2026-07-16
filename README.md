@@ -11,7 +11,7 @@ Argus is a **professional-grade, ethical OSINT and reconnaissance framework** de
 ## 🧠 Core Capabilities
 
 ### 🔍 Passive Intelligence Gathering (Stealth)
-- **WHOIS & Domain Identity** — Native socket WHOIS + WhoisXML API backfill for registrar, creation/expiry dates, registrant details
+- **WHOIS & Domain Identity** — Native socket WHOIS with **multi-server fallback** + WhoisXML API backfill for registrar, creation/expiry dates, registrant details
 - **DNS Enumeration** — A, NS, MX, TXT, SOA records with TTL
 - **SSL/TLS Analysis** — Certificate issuer, subject, validity, expiry check
 - **Subdomain Discovery** — 25+ free sources + API-based (VirusTotal, SecurityTrails, Shodan, etc.)
@@ -23,6 +23,48 @@ Argus is a **professional-grade, ethical OSINT and reconnaissance framework** de
 - **DNSBL Reputation Check** — Spamhaus, SpamCop, Barracuda, Sorbs & more
 - **AbuseIPDB** — IP abuse score & threat reporting
 - **Search Engine IP** — DuckDuckGo threat references
+
+### 🌐 Web Reconnaissance (23 Free Techniques)
+- **CORS Misconfiguration Testing** — Arbitrary origin reflection detection
+- **Open Redirect Detection** — URL parameter fuzzing across 20+ redirect params
+- **CRLF Injection Testing** — HTTP response splitting detection
+- **Subdomain Takeover Detection** — CNAME analysis for 12+ cloud services
+- **Host Header Injection** — Cache poisoning & virtual host testing
+- **Rate Limit Detection** — Rapid request burst analysis
+- **Technology CVE Lookup** — Free NVD API integration for detected tech versions
+- **Sensitive Comment Extraction** — HTML/JS comment scanning (TODOs, credentials, PII)
+- **Mixed Content Detection** — HTTP resources on HTTPS pages
+- **Cache & Caching Header Inspection** — ETag, Cache-Control, proxy cache analysis
+- **Third-party Resource Analysis** — External domain categorization (CDN, analytics, ads)
+- **Form Discovery & Analysis** — Input field enumeration, file upload detection
+- **Password Policy Analysis** — Login/registration page requirement scanning
+- **Embedded Object Detection** — iframes, objects, embeds
+- **Content Security Policy Deep Analysis** — Directive audit with XSS risk detection
+- **API Endpoint Security Testing** — 20+ common API path discovery
+- **HTTP Request Smuggling Detection** — CL.TE raw socket probe
+- **Information Disclosure Testing** — Server headers, stack traces, debug endpoints
+- **Backup/Sensitive File Discovery** — 60+ sensitive path checks
+- **Hidden Endpoint Discovery** — 45+ admin/ops endpoints
+- **SMTP Open Relay Testing** — Raw socket MAIL FROM/RCPT TO validation
+- **Active Subdomain Brute Force** — 100+ wordlist with DNS resolution
+- **Network Route Visualization** — Hop-by-hop geo/IP analysis with traceroute
+
+### 🖥️ Advanced IP Reconnaissance (100+ Techniques)
+- **Active Network Recon** — ICMP timestamp/address mask, TCP SYN/ACK/Connect pings, FIN/NULL/Xmas/ACK/Window/Maimon stealth scans
+- **Advanced OS Fingerprinting** — TCP/IP stack analysis (TTL, Window Size, IP ID)
+- **Enhanced Traceroute** — TCP, UDP, and ICMP methods with path visualization
+- **Extended DNS Records** — SPF, DMARC, DKIM, SRV, CAA, NAPTR, DNSKEY, DS, LOC
+- **DNS Security Checks** — Open resolver detection, DNSSEC validation, wildcard detection
+- **Service Enumeration** — FTP (anonymous login), SSH (version + KEX), Telnet, RDP (NLA detection), VNC (auth type), Database (MySQL, Redis, MongoDB, ES, etc.), RPC/NFS
+- **ASN & BGP Intelligence** — Upstream/peer discovery, BGP hijack detection
+- **Historical Reverse DNS** — PTR validation, forward-confirmed check
+- **Reverse IP Lookup** — Co-hosted domain enumeration via HackerTarget
+- **Threat Intelligence** — GreyNoise classification, MalwareBazaar samples, ThreatFox IOCs
+- **Internet Scan Databases** — BinaryEdge port/service history
+- **Certificate Intelligence** — SAN enumeration, weak algorithm detection, expiry analysis
+- **Cloud Infrastructure Detection** — AWS, Azure, GCP, DigitalOcean, Linode, Vultr, Oracle Cloud
+- **VPN/Proxy/TOR Detection** — DNSBL-based TOR exit node check, proxy port scanning
+- **Network Security Analysis** — WAF fingerprinting (Cloudflare, AWS, Akamai, F5, Imperva, ModSecurity, etc.), firewall filtering analysis
 
 ### ⚙️ Active Reconnaissance (Optional & Controlled)
 - **Ping Sweep** — ICMP host discovery
@@ -36,6 +78,8 @@ Argus is a **professional-grade, ethical OSINT and reconnaissance framework** de
 - **Enhanced SMTP Enumeration** — VRFY, EXPN, EHLO capabilities
 - **Tech Detection** — 125+ signatures via TechDetector + TechChecker.io API
 - **Web Robots/Security.txt/Sitemap Discovery**
+
+> **WHOIS Reliability Improvements**: Multi-server fallback with retry logic, updated .IN registry WHOIS server (`whois.nixiregistry.in` with `whois.registry.in` fallback), enhanced date/registrar regex patterns for .IN registry format, and report fallback re-query when WHOIS data is missing.
 
 ### 🛡️ Threat Intelligence
 - **VirusTotal** — Domain/IP reputation & resolution history
@@ -125,6 +169,18 @@ Argus is a **professional-grade, ethical OSINT and reconnaissance framework** de
 │ │ GraphQL / WebSocket / gRPC / Fuzzing │   │
 │ │ SSL Test / Cookie Audit / Form Enum  │   │
 │ └───────────────────────────────────────┘   │
+│ ┌─ Web Recon (NEW — 23 free techs) ────┐   │
+│ │ CORS / Open Redirect / CRLF / Takeover│   │
+│ │ CVE Lookup / Rate Limit / CSP Audit  │   │
+│ │ API Sec / Smuggling / Disclosure     │   │
+│ │ SMTP Relay / Sub Brute / Route Viz   │   │
+│ └───────────────────────────────────────┘   │
+│ ┌─ IP Recon (NEW — 100+ techs) ────────┐   │
+│ │ ICMP Info / Stealth Scans / OS FP    │   │
+│ │ Service Enum / Cloud Detect / TOR    │   │
+│ │ Threat Intel / WAF FP / BGP Hijack   │   │
+│ │ Cert Intel / Reverse IP / IPv6       │   │
+│ └───────────────────────────────────────┘   │
 │ ┌─ Threat Intel / Search / Geo / Meta ─┐   │
 │ │ VT / Shodan / OTX / Censys / GitHub   │   │
 │ │ Geolocation / Metadata Extraction    │   │
@@ -203,9 +259,11 @@ python orchestrator/orchestrator.py example.com --mode full --consent-given
 | :--- | :--- | :--- |
 | 1. Passive Recon | `passive` | WHOIS, DNS, SSL, subdomains, emails, DNSBL, BGP, historical WHOIS |
 | 2. Active Recon | `active` | Ping, ports, dir busting, tech detect, SNMP/SMB/LDAP/NTP/SMTP enum |
-| 3. Search Intel | `search` | GitHub dorking, search engine intelligence |
-| 4. Web Analysis | `web` | Probing, CMS, JS analysis, GraphQL, WS, gRPC, SSL test, cookie audit |
-| 5. Reporting | — | Interactive HTML + PDF generation with risk scoring |
+| 3. Advanced IP Recon | `full` | 100+ IP techs: stealth scans, service enum, cloud detect, WAF, threat intel |
+| 4. Search Intel | `search` | GitHub dorking, search engine intelligence |
+| 5. Web Analysis | `web` | Probing, CMS, JS analysis, GraphQL, WS, gRPC, SSL test, cookie audit |
+| 6. Web Recon | `full` | 23 free techs: CORS, open redirect, CRLF, CSP, API sec, route viz |
+| 7. Reporting | — | Interactive HTML + PDF generation with risk scoring |
 
 ---
 
@@ -226,6 +284,8 @@ HIBP_API_KEY=your_key_here
 ABUSEIPDB_API_KEY=your_key_here
 IPINFO_API_KEY=your_key_here
 TECHCHECKER_API_KEY=your_key_here
+BINARYEDGE_API_KEY=your_key_here
+GREYNOISE_API_KEY=your_key_here
 ```
 
 > [!CAUTION]
@@ -250,6 +310,12 @@ TECHCHECKER_API_KEY=your_key_here
 | **Chaos (ProjectDiscovery)** | Subdomain datasets | Free | `passive_sources.py` |
 | **Brave Search** | Search intelligence | 2000 req/month | `passive_sources.py` |
 | **Hunter.io** | Email finding | 25 req/month | `passive_sources.py` |
+| **GreyNoise** | IP threat classification | Free (community) | `ip_recon.py` |
+| **BinaryEdge** | Internet scan database | Limited | `ip_recon.py` |
+| **MalwareBazaar (abuse.ch)** | Malware sample lookup | Free | `ip_recon.py` |
+| **ThreatFox (abuse.ch)** | IOC search | Free | `ip_recon.py` |
+| **NVD (NIST)** | CVE lookup for detected tech | Free (no key needed) | `web_recon.py` |
+| **HackerTarget** | Reverse IP, ASN lookup | Free (no key needed) | `ip_recon.py`, `web_recon.py` |
 
 The framework **degrades gracefully** — missing API keys simply skip their respective features without crashing.
 
@@ -265,11 +331,12 @@ All settings are managed from a single file: `orchestrator/config.py`
 | :--- | :--- |
 | **API Keys** | 20+ API keys loaded from environment |
 | **Rate Limits** | Per-API request throttling (seconds between requests) |
-| **Module Toggles** | Enable/disable each module independently |
+| **Module Toggles** | Enable/disable each module independently (including `ENABLE_IP_RECON`) |
 | **Timeouts** | HTTP, DNS, and command execution timeouts |
 | **Threading** | Max workers for ports, directories, subdomains, general tasks |
 | **Port Scanning** | Custom TCP/UDP port lists, HTTP/HTTPS port sets |
 | **Web Probing** | Web port list, vhost prefixes, GraphQL endpoints, gRPC ports |
+| **IP Reconnaissance** | Enable/disable toggle, BinaryEdge API key, GreyNoise API key |
 | **Safety** | Consent requirement toggle, audit logging toggle |
 | **Tool Paths** | Override paths for external tools (httpx, nuclei, katana, ffuf, etc.) |
 
@@ -290,6 +357,8 @@ Argus-OSINT/
 │       ├── passive_recon.py     # WHOIS, DNS, SSL, subdomains, DNSBL, BGP, historical WHOIS
 │       ├── active_recon.py      # Port scan, dir busting, tech detect, SNMP/SMB/LDAP/NTP/SMTP
 │       ├── web_analysis.py      # Web probing, CMS, JS analysis, GraphQL, WS, gRPC, SSL test
+│       ├── web_recon.py         # 23 new free web recon techniques (CORS, open redirect, etc.)
+│       ├── ip_recon.py          # 100+ IP recon techniques (stealth scans, cloud detect, WAF FP, etc.)
 │       ├── passive_sources.py   # Subdomain discovery from 25+ free + API sources
 │       ├── external_tools.py    # Wrappers for theHarvester, Amass, etc.
 │       ├── threat_intel.py      # VirusTotal, Shodan, OTX, Censys integrations

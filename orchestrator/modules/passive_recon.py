@@ -21,6 +21,7 @@ import random
 import os
 from functools import lru_cache
 from datetime import datetime
+import time
 from config import config, Colors
 from utils import get_random_user_agent as _get_ua, get_random_headers
 
@@ -30,39 +31,42 @@ DNS_RECORD_TYPES = frozenset(['A', 'NS', 'MX', 'TXT', 'SOA'])
 def _get_whois_server(domain: str) -> str:
     """Determine the appropriate WHOIS server for a given domain TLD.
     Uses IANA WHOIS as the authority, with common TLD shortcuts for speed.
+    Returns a list of servers in priority order for fallback support.
     """
-    # Common TLD -> WHOIS server mapping (avoids hitting IANA for common cases)
+    # Common TLD -> WHOIS server mapping with fallback alternatives
+    # Format: primary | alternative1 | alternative2
     known_servers = {
-        '.com': 'whois.verisign-grs.com',
-        '.net': 'whois.verisign-grs.com',
-        '.org': 'whois.pir.org',
-        '.in': 'whois.registry.in',
+        '.com': ['whois.verisign-grs.com'],
+        '.net': ['whois.verisign-grs.com'],
+        '.org': ['whois.pir.org'],
+        '.in': ['whois.nixiregistry.in', 'whois.registry.in'],
         # Indian multi-part TLDs (subdomains of .in registry)
-        '.ac.in': 'whois.registry.in',
-        '.co.in': 'whois.registry.in',
-        '.net.in': 'whois.registry.in',
-        '.org.in': 'whois.registry.in',
-        '.gen.in': 'whois.registry.in',
-        '.firm.in': 'whois.registry.in',
-        '.ind.in': 'whois.registry.in',
-        '.us': 'whois.nic.us',
-        '.io': 'whois.nic.io',
-        '.gov': 'whois.dotgov.gov',
-        '.edu': 'whois.educause.edu',
-        '.mil': 'whois.nic.mil',
-        '.int': 'whois.iana.int',
-        '.uk': 'whois.nic.uk',
-        '.de': 'whois.denic.de',
-        '.jp': 'whois.jprs.jp',
-        '.au': 'whois.auda.org.au',
-        '.ca': 'whois.cira.ca',
-        '.fr': 'whois.nic.fr',
-        '.br': 'whois.registro.br',
-        '.cn': 'whois.cnnic.cn',
-        '.ru': 'whois.tcinet.ru',
-        '.eu': 'whois.eu',
-        '.xyz': 'whois.nic.xyz',
-        '.top': 'whois.nic.top',
+        # NOTE: whois.registry.in was deprecated, replaced by whois.nixiregistry.in
+        '.ac.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.co.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.net.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.org.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.gen.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.firm.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.ind.in': ['whois.nixiregistry.in', 'whois.registry.in'],
+        '.us': ['whois.nic.us'],
+        '.io': ['whois.nic.io'],
+        '.gov': ['whois.dotgov.gov'],
+        '.edu': ['whois.educause.edu'],
+        '.mil': ['whois.nic.mil'],
+        '.int': ['whois.iana.int'],
+        '.uk': ['whois.nic.uk'],
+        '.de': ['whois.denic.de'],
+        '.jp': ['whois.jprs.jp'],
+        '.au': ['whois.auda.org.au'],
+        '.ca': ['whois.cira.ca'],
+        '.fr': ['whois.nic.fr'],
+        '.br': ['whois.registro.br'],
+        '.cn': ['whois.cnnic.cn'],
+        '.ru': ['whois.tcinet.ru'],
+        '.eu': ['whois.eu'],
+        '.xyz': ['whois.nic.xyz'],
+        '.top': ['whois.nic.top'],
     }
     
     # Extract TLD (handle multi-part TLDs like .ac.in, .co.uk)
@@ -72,11 +76,11 @@ def _get_whois_server(domain: str) -> str:
         if len(parts) >= 3:
             multi_tld = '.' + '.'.join(parts[-2:])
             if multi_tld in known_servers:
-                return known_servers[multi_tld]
+                return known_servers[multi_tld][0], known_servers[multi_tld][1:]
         # Check single TLD
         tld = '.' + parts[-1]
         if tld in known_servers:
-            return known_servers[tld]
+            return known_servers[tld][0], known_servers[tld][1:]
     
     # Fallback: Query IANA WHOIS for unknown TLDs to find the authoritative server
     try:
@@ -99,68 +103,98 @@ def _get_whois_server(domain: str) -> str:
             if line.lower().startswith('whois:'):
                 server = line.split(':', 1)[1].strip()
                 if server:
-                    return server
+                    return server, []
     except Exception:
         pass
     
     # Ultimate fallback: try Verisign (covers many TLDs, returns referral info)
-    return 'whois.verisign-grs.com'
+    return 'whois.verisign-grs.com', []
 
 
 def simple_whois(domain: str) -> str:
     """Perform a native socket-based WHOIS lookup with automatic server selection.
-    Routes to the correct WHOIS server based on TLD.
+    Routes to the correct WHOIS server based on TLD, with multi-server fallback.
     """
-    whois_server = _get_whois_server(domain)
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(10)
-        s.connect((whois_server, 43))
-        s.send(f"{domain}\r\n".encode())
-        
-        response = b""
-        while True:
-            data = s.recv(4096)
-            if not data:
-                break
-            response += data
-        s.close()
-        
-        text = response.decode(errors='ignore')
-        
-        # Check if server returned a referral to a different WHOIS server
-        # (e.g., Verisign returns referral for non-.com domains)
-        if 'Whois Server:' in text or 'WHOIS Server:' in text or 'Registrar WHOIS Server:' in text:
-            for line in text.splitlines():
-                line = line.strip()
-                if 'Whois Server:' in line or 'WHOIS Server:' in line or 'Registrar WHOIS Server:' in line:
-                    referred_server = line.split(':', 1)[1].strip()
-                    if referred_server and referred_server != whois_server:
-                        # Follow the referral
-                        try:
-                            s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            s2.settimeout(10)
-                            s2.connect((referred_server, 43))
-                            s2.send(f"{domain}\r\n".encode())
-                            response2 = b""
-                            while True:
-                                data = s2.recv(4096)
-                                if not data:
-                                    break
-                                response2 += data
-                            s2.close()
-                            return response2.decode(errors='ignore')
-                        except Exception:
-                            pass
+    primary_server, alt_servers = _get_whois_server(domain)
+    
+    # Build server attempt list: primary -> referral follow -> alternatives -> ultimate fallback
+    servers_to_try = [primary_server] + alt_servers
+    
+    last_error = None
+    for whois_server in servers_to_try:
+        try:
+            # Resolve hostname first to catch DNS failures early
+            try:
+                socket.gethostbyname(whois_server)
+            except socket.gaierror:
+                last_error = f"DNS resolution failed for {whois_server}"
+                continue
+            
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(10)
+            s.connect((whois_server, 43))
+            s.send(f"{domain}\r\n".encode())
+            
+            response = b""
+            while True:
+                data = s.recv(4096)
+                if not data:
+                    break
+                response += data
+            s.close()
+            
+            text = response.decode(errors='ignore')
+            
+            # Skip empty responses or "not found" responses
+            if not text.strip() or "No Data Found" in text or "NOT FOUND" in text.upper() or "No match for" in text:
+                # Try next server
+                continue
+            
+            # Check if server returned a referral to a different WHOIS server
+            if 'Whois Server:' in text or 'WHOIS Server:' in text or 'Registrar WHOIS Server:' in text:
+                for line in text.splitlines():
+                    line = line.strip()
+                    if 'Whois Server:' in line or 'WHOIS Server:' in line or 'Registrar WHOIS Server:' in line:
+                        referred_server = line.split(':', 1)[1].strip()
+                        if referred_server and referred_server != whois_server and referred_server not in servers_to_try:
+                            # Follow the referral
+                            try:
+                                socket.gethostbyname(referred_server)
+                            except socket.gaierror:
+                                continue
+                            try:
+                                s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                s2.settimeout(10)
+                                s2.connect((referred_server, 43))
+                                s2.send(f"{domain}\r\n".encode())
+                                response2 = b""
+                                while True:
+                                    data = s2.recv(4096)
+                                    if not data:
+                                        break
+                                    response2 += data
+                                s2.close()
+                                referred_text = response2.decode(errors='ignore')
+                                if referred_text.strip():
+                                    return referred_text
+                            except Exception:
+                                pass
                         break
-        
-        return text
-    except Exception as e:
-        return f"WHOIS Lookup Failed: {e}"
+            
+            # If we got here, we have a non-empty response
+            if text.strip():
+                return text
+                
+        except Exception as e:
+            last_error = str(e)
+            continue
+    
+    return f"WHOIS Lookup Failed: {last_error or 'All WHOIS servers unreachable'}"
 
 def parse_whois_dates(text: str):
     """Parse creation and expiry dates from WHOIS text using flexible regex matching.
     Handles multiple formats across different registries (.com, .in, .org, etc.).
+    Enhanced patterns for .IN registry format (whois.registry.in).
     """
     created = ""
     expires = ""
@@ -169,28 +203,40 @@ def parse_whois_dates(text: str):
     registrant_email = ""
     
     # Flexible regex patterns for creation dates
+    # .IN registry format: "Created On:15-Jan-2002 16:59:29 UTC"
     created_patterns = [
-        r'(?i)(?:creation\s*date|created\s*(?:on|date)?|registered\s*(?:on|date)?|domain\s*created|created)\s*[:=]\s*(.+)$',
+        r'(?i)(?:creation\s*date|created\s*(?:on|date)?|registered\s*(?:on|date)?|domain\s*created|created\s*on|created)\s*[:=]\s*(.+)$',
+        r'(?i)^Created\s*On\s*[:=]\s*(.+)$',
     ]
     
     # Flexible regex patterns for expiration dates
+    # .IN registry format: "Expiration Date:31-Jan-2021 16:59:29 UTC"
     expires_patterns = [
-        r'(?i)(?:registry\s*expiry\s*date|expiration\s*date|expires\s*(?:on|date)?|expiry\s*date|valid\s*until|paid\s*until|renewal\s*date)\s*[:=]\s*(.+)$',
+        r'(?i)(?:registry\s*expiry\s*date|expiration\s*date|expires\s*(?:on|date)?|expiry\s*date|valid\s*until|paid\s*until|renewal\s*date|expires|expiry)\s*[:=]\s*(.+)$',
+        r'(?i)^Expiration\s*Date\s*[:=]\s*(.+)$',
     ]
     
     # Flexible regex patterns for registrar
+    # .IN registry format: "Registrar Name:abc"
+    # IMPORTANT: Order matters - more specific patterns first
     registrar_patterns = [
-        r'(?i)(?:registrar|sponsoring\s*registrar|registrar\s*name)\s*[:=]\s*(.+)$',
+        # Exact match for "Registrar: Name" (most common) - must NOT match "Registrar URL", "Registrar IANA ID", "Registrar WHOIS Server"
+        r'(?i)^Registrar\s*[:=]\s*(.+)$',
+        # Match "Sponsoring Registrar: Name"
+        r'(?i)^Sponsoring\s+Registrar\s*[:=]\s*(.+)$',
+        # Match "Registrar Name: Name"
+        r'(?i)^Registrar\s+Name\s*[:=]\s*(.+)$',
     ]
     
     # Flexible regex patterns for registrant name
+    # .IN registry format: "Registrant Contact Name:xyz"
     registrant_name_patterns = [
-        r'(?i)(?:registrant\s*(?:name|organization|org)|owner\s*(?:name|organization|org)|org\s*name|organisation\s*name)\s*[:=]\s*(.+)$',
+        r'(?i)(?:registrant\s*(?:name|organization|org)|owner\s*(?:name|organization|org)|org\s*name|organisation\s*name|registrant\s*contact\s*name)\s*[:=]\s*(.+)$',
     ]
     
     # Flexible regex patterns for registrant email
     registrant_email_patterns = [
-        r'(?i)(?:registrant\s*email|owner\s*email|contact\s*email|email)\s*[:=]\s*(.+)$',
+        r'(?i)(?:registrant\s*email|owner\s*email|contact\s*email|email|registrant\s*contact\s*email)\s*[:=]\s*(.+)$',
     ]
     
     for line in text.splitlines():
@@ -222,9 +268,9 @@ def parse_whois_dates(text: str):
                         expires = val
                         break
         
-        # Match registrar (skip registrant/registration/registry)
+        # Match registrar (skip registrant/registration/registry URL/Registrar IANA/Registrar WHOIS)
         if not registrar:
-            if not any(x in lower for x in ['registrant', 'registration', 'registry url']):
+            if not any(x in lower for x in ['registrant', 'registration', 'registry url', 'registrar url', 'registrar iana', 'registrar whois', 'whois server', 'registrar registration']):
                 for pattern in registrar_patterns:
                     m = re.search(pattern, line)
                     if m:
@@ -268,15 +314,37 @@ class PassiveRecon:
     def run_whois(self):
         """Perform WHOIS lookup and store registration details.
         Uses native socket WHOIS first, then WhoisXML API as backfill if key is configured.
+        Includes retry logic for transient network failures.
         """
         print("[+] Running WHOIS lookup (Native)...")
         c_date = e_date = registrar = r_name = r_email = ""
         
-        try:
-            raw_text = simple_whois(self.target)
-            c_date, e_date, registrar, r_name, r_email = parse_whois_dates(raw_text)
-        except Exception as e:
-            print(f"    [!] Native WHOIS error: {e}")
+        # Retry native WHOIS up to 2 times if it returns empty critical fields
+        for attempt in range(2):
+            try:
+                raw_text = simple_whois(self.target)
+                if raw_text.startswith("WHOIS Lookup Failed:"):
+                    if attempt == 0:
+                        print(f"    [!] {raw_text} (retrying...)")
+                        time.sleep(1)
+                        continue
+                    else:
+                        print(f"    [!] {raw_text}")
+                else:
+                    c_date, e_date, registrar, r_name, r_email = parse_whois_dates(raw_text)
+                    # If critical fields are empty, retry once
+                    if not c_date and not e_date and not registrar:
+                        if attempt == 0:
+                            print("    [!] WHOIS returned empty fields, retrying...")
+                            time.sleep(1)
+                            continue
+                    break
+            except Exception as e:
+                if attempt == 0:
+                    print(f"    [!] Native WHOIS error: {e} (retrying...)")
+                    time.sleep(1)
+                else:
+                    print(f"    [!] Native WHOIS error: {e}")
         
         # Backfill with WhoisXML API if native lookup returned empty fields and key is configured
         if config.WHOISXML_API_KEY and (not c_date or not e_date or not registrar):
@@ -992,17 +1060,6 @@ class PassiveRecon:
                 finally: self.db.close()
         else:
             print(f"    - No historical WHOIS data available for {self.target}")
-            # Still save a minimal record to track that we checked
-            if self.db.connect():
-                try:
-                    cursor = self.db.conn.cursor()
-                    cursor.execute("""INSERT OR IGNORE INTO whois_history
-                        (target_id, domain, source, snapshot_date)
-                        VALUES (?, ?, 'whois.domaintools.com', datetime('now'))""",
-                        (self.target_id, self.target))
-                    self.db.conn.commit()
-                except: pass
-                finally: self.db.close()
 
     def run_search_engine_ip(self):
         """Search search engines for IP references."""

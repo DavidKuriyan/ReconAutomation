@@ -14,6 +14,8 @@ from .web_analysis import WebAnalysis
 from .passive_sources import PassiveSources
 from .passive_recon import PassiveRecon
 from .active_recon import ActiveRecon
+from .ip_recon import IpRecon
+from .web_recon import WebRecon
 
 __all__ = [
     'GeoIntelligence',
@@ -28,4 +30,6 @@ __all__ = [
     'PassiveSources',
     'PassiveRecon',
     'ActiveRecon',
+    'IpRecon',
+    'WebRecon',
 ]

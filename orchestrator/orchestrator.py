@@ -30,7 +30,9 @@ from modules.reporting import ReportGenerator
 # New Modular Imports
 from modules.passive_recon import PassiveRecon
 from modules.active_recon import ActiveRecon
+from modules.ip_recon import IpRecon
 from modules.web_analysis import WebAnalysis
+from modules.web_recon import WebRecon
 
 # Configuration
 DB_PATH = config.DB_PATH
@@ -403,6 +405,10 @@ class ReconEngine:
                     lambda ip=ip_to_check: self.passive.run_certificate_transparency_with_ip(ip),
                     "Certificate Transparency"
                 )
+                
+                # ADVANCED IP RECONNAISSANCE (new module with 50+ techniques)
+                ip_recon = IpRecon(self.target, ip_to_check, self.target_id, self.db)
+                self.execution_wrapper(ip_recon.execute_all, "Advanced IP Recon")
 
             # Historical WHOIS and Reverse WHOIS (domain only)
             if not self.is_ip_target:
@@ -457,6 +463,10 @@ class ReconEngine:
             print("="*50)
             web = WebAnalysis(self.target, self.target_id, self.db)
             self.execution_wrapper(web.execute, "Web Analysis")
+            
+            # Web Recon (new free techniques)
+            web_recon = WebRecon(self.target, self.target_id, self.db)
+            self.execution_wrapper(web_recon.execute_all, "Web Recon")
 
         # 8. Finalization
         print(f"\n{Colors.SUCCESS}✓ SCAN COMPLETED SUCCESSFULLY{Colors.RESET}")

@@ -70,6 +70,30 @@ class ReportGenerator:
         # SECTION 1: DOMAIN & WHOIS
         # =====================================================================
         data['domain_info'] = safe_fetch_one("SELECT * FROM domain_info WHERE target_id=?", (tid,))
+        
+        # Fallback: If WHOIS data is missing (empty registrar/created/expires), re-query
+        if data['domain_info'] and not data['domain_info'].get('registrar'):
+            try:
+                print("    [!] WHOIS data missing, re-querying...")
+                from modules.passive_recon import simple_whois, parse_whois_dates
+                raw = simple_whois(self.target)
+                if not raw.startswith("WHOIS Lookup Failed:"):
+                    c_date, e_date, registrar, r_name, r_email = parse_whois_dates(raw)
+                    try:
+                        cursor.execute("""UPDATE domain_info SET 
+                            registrar=?, creation_date=?, expiration_date=?, 
+                            registrant_name=?, registrant_email=?
+                            WHERE target_id=?""",
+                            (registrar, c_date, e_date, 
+                             r_name or "Redacted (GDPR)", r_email or "Redacted", tid))
+                        conn.commit()
+                        # Re-fetch
+                        data['domain_info'] = safe_fetch_one("SELECT * FROM domain_info WHERE target_id=?", (tid,))
+                    except Exception as db_err:
+                        pass
+            except Exception:
+                pass
+        
         data['rir_whois'] = safe_fetch("SELECT * FROM rir_whois WHERE target_id=?", (tid,))
         data['whois_history'] = safe_fetch(
             "SELECT * FROM whois_history WHERE target_id=? ORDER BY snapshot_date DESC", (tid,)

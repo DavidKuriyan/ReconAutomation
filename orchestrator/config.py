@@ -72,6 +72,11 @@ class Config:
     ARJUN_PATH = os.getenv('ARJUN_PATH', 'arjun')
     GRPCURL_PATH = os.getenv('GRPCURL_PATH', 'grpcurl')
     
+    # IP Reconnaissance Module Settings
+    ENABLE_IP_RECON = os.getenv('ENABLE_IP_RECON', 'true').lower() == 'true'
+    BINARYEDGE_API_KEY = os.getenv('BINARYEDGE_API_KEY', '')
+    GREYNOISE_API_KEY = os.getenv('GREYNOISE_API_KEY', '')
+    
     # Web Analysis Settings
     RATE_LIMIT_WEB_ANALYSIS = float(os.getenv('RATE_LIMIT_WEB_ANALYSIS', '5.0'))
     MAX_WORKERS_WEB_ANALYSIS = int(os.getenv('MAX_WORKERS_WEB_ANALYSIS', '10'))

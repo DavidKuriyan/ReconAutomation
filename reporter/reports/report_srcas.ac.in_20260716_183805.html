@@ -1,0 +1,2875 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Argus OSINT Report - srcas.ac.in</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; background: #f8f9fc; line-height: 1.5; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        /* HEADER */
+        .header { background: linear-gradient(135deg, #0d1117 0%, #1a1a3e 100%); color: #00ff9d; padding: 30px 40px; text-align: center; border-bottom: 4px solid #00ff9d; margin-bottom: 30px; position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(0,240,255,0.05) 0%, transparent 70%); }
+        .header img { height: 70px; width: 70px; border-radius: 50%; border: 3px solid #00ff9d; margin-bottom: 10px; object-fit: cover; }
+        .header h1 { font-size: 28px; letter-spacing: 3px; text-transform: uppercase; margin: 10px 0 5px; position: relative; }
+        .header p { color: #8892b0; font-size: 13px; letter-spacing: 1px; position: relative; }
+        .header .risk-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; }
+
+        /* SECTION */
+        .section { background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 25px; overflow: hidden; page-break-inside: avoid; border: 1px solid #e8ecf1; }
+        .section-title { font-size: 16px; font-weight: 700; color: #0d1117; padding: 15px 20px; background: #f0f4f8; border-bottom: 2px solid #00ff9d; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+        .section-title .count { font-size: 12px; background: #0d1117; color: #00ff9d; padding: 2px 10px; border-radius: 12px; }
+        .section-body { padding: 20px; }
+
+        /* TABLE */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f7f8fc; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 9px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f7fafc; }
+
+        /* METRIC ROW */
+        .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-label { color: #718096; font-weight: 500; }
+        .metric-val { font-weight: 600; color: #1a202c; }
+        .metric-val.warning { color: #ecc94b; }
+        .metric-val.danger { color: #e53e3e; }
+
+        /* BADGES */
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-critical { background: #fed7d7; color: #c53030; border: 1px solid #feb2b2; }
+        .badge-high { background: #fefcbf; color: #975a16; border: 1px solid #f6e05e; }
+        .badge-medium { background: #bee3f8; color: #2b6cb0; border: 1px solid #90cdf4; }
+        .badge-low { background: #e2e8f0; color: #4a5568; border: 1px solid #cbd5e0; }
+        .badge-info { background: #c6f6d5; color: #276749; border: 1px solid #9ae6b4; }
+
+        /* CARDS GRID */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .stat-card { background: #fff; padding: 20px; text-align: center; border-radius: 8px; border: 1px solid #e8ecf1; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .stat-card .num { font-size: 32px; font-weight: 800; color: #0d1117; }
+        .stat-card .label { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+        .ti-card { background: #f7fafc; border-left: 4px solid #00ff9d; padding: 12px 15px; margin-bottom: 10px; border-radius: 0 6px 6px 0; }
+        .ti-source { font-weight: 700; font-size: 14px; margin-bottom: 5px; }
+        .ti-details { font-size: 12px; color: #4a5568; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+
+        .safe-tag { display: inline-block; background: #c6f6d5; color: #276749; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+        .risk-tag { display: inline-block; background: #fed7d7; color: #c53030; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+
+        .footer { text-align: center; font-size: 10px; color: #a0aec0; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+
+        .sub-list { list-style: none; padding: 0; }
+        .sub-list li { padding: 6px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; font-family: 'Courier New', monospace; }
+        .sub-list li:last-child { border-bottom: none; }
+        .sub-list li .bullet { color: #00ff9d; font-weight: bold; }
+
+        .two-col-layout { display: flex; gap: 16px; flex-wrap: wrap; }
+        .two-col-layout > div { flex: 1; min-width: 280px; }
+
+        /* NEGATIVE / POSITIVE INDICATORS */
+        .yes { color: #e53e3e; font-weight: bold; }
+        .no { color: #38a169; font-weight: bold; }
+        .partial { color: #d69e2e; font-weight: bold; }
+
+        @media print {
+            .section { break-inside: avoid; }
+            .grid-2, .grid-3 { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- ============================================================ -->
+    <!-- HEADER -->
+    <!-- ============================================================ -->
+    <div class="header">
+        
+        <img src="file:///D:/Cyber security Projects/Reconnaissance/reporter/static/img/logo.jpg" alt="Logo">
+        
+        <h1>🛡️ ARGUS OSINT REPORT</h1>
+        <p>srcas.ac.in | 2026-07-16 18:38:05 | Confidential</p>
+        <div class="risk-badge" style="background: #e53e3e; color: #fff;">
+            Risk Score: 100/100
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- DASHBOARD STATS -->
+    <!-- ============================================================ -->
+    <div class="grid-3">
+        <div class="stat-card"><div class="num" style="color: #38a169;">2</div><div class="label">Open Ports</div></div>
+        <div class="stat-card"><div class="num" style="color: #3182ce;">35</div><div class="label">Subdomains</div></div>
+        <div class="stat-card"><div class="num" style="color: #d69e2e;">1</div><div class="label">Technologies</div></div>
+        <div class="stat-card"><div class="num" style="color: #e53e3e;">53</div><div class="label">Findings</div></div>
+        <div class="stat-card"><div class="num" style="color: #805ad5;">25</div><div class="label">DNS Records</div></div>
+        <div class="stat-card"><div class="num" style="color: #dd6b20;">2</div><div class="label">Threat Sources</div></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 1. TARGET OVERVIEW -->
+    <!-- ============================================================ -->
+    <div class="section">
+        <div class="section-title">🎯 Target Overview</div>
+        <div class="section-body">
+            <div class="metric-row"><span class="metric-label">Domain</span><span class="metric-val">srcas.ac.in</span></div>
+            <div class="metric-row"><span class="metric-label">Scan Date</span><span class="metric-val">2026-07-16 18:38:05</span></div>
+            <div class="metric-row"><span class="metric-label">Risk Score</span><span class="metric-val danger">100/100</span></div>
+            
+            <div class="metric-row"><span class="metric-label">Location</span><span class="metric-val">Mumbai, India (Amazon.com, Inc.)</span></div>
+            <div class="metric-row"><span class="metric-label">ASN</span><span class="metric-val">AS16509 - Amazon.com, Inc.</span></div>
+            
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 2. DOMAIN IDENTITY & WHOIS -->
+    <!-- ============================================================ -->
+    <div class="section">
+        <div class="section-title">📋 Domain Identity & WHOIS</div>
+        <div class="section-body">
+            
+            <div class="metric-row"><span class="metric-label">Registrar</span><span class="metric-val">ERNET India</span></div>
+            <div class="metric-row"><span class="metric-label">Created</span><span class="metric-val">2017-03-09T09:45:12.228Z</span></div>
+            <div class="metric-row"><span class="metric-label">Expires</span><span class="metric-val">2028-03-09T09:45:12.228Z</span></div>
+            <div class="metric-row"><span class="metric-label">Registrant</span><span class="metric-val">Sri Ramakrishna College of Arts and Science</span></div>
+            <div class="metric-row"><span class="metric-label">Email</span><span class="metric-val">tejalt@eis.ernet.in</span></div>
+            
+            
+            
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 3. DNS RECORDS -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🌐 DNS Records <span class="count">25</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Type</th><th>Value</th><th>TTL</th></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">3.108.14.95</td><td>60</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.146.16</td><td>60</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">3.108.14.95</td><td>44</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.146.16</td><td>44</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">3.108.14.95</td><td>59</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.146.16</td><td>59</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.201.58</td><td>59</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.146.16</td><td>25</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.201.58</td><td>25</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.201.58</td><td>58</td></tr>
+                
+                <tr><td><strong>A</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">13.205.146.16</td><td>58</td></tr>
+                
+                <tr><td><strong>MX</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">1 smtp.google.com.</td><td>60</td></tr>
+                
+                <tr><td><strong>MX</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">1 smtp.google.com.</td><td>45</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-1196.awsdns-21.org.</td><td>60</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-1937.awsdns-50.co.uk.</td><td>60</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-480.awsdns-60.com.</td><td>60</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-814.awsdns-37.net.</td><td>60</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-1196.awsdns-21.org.</td><td>45</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-1937.awsdns-50.co.uk.</td><td>45</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-480.awsdns-60.com.</td><td>45</td></tr>
+                
+                <tr><td><strong>NS</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-814.awsdns-37.net.</td><td>45</td></tr>
+                
+                <tr><td><strong>SOA</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-814.awsdns-37.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400</td><td>900</td></tr>
+                
+                <tr><td><strong>SOA</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">ns-814.awsdns-37.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400</td><td>886</td></tr>
+                
+                <tr><td><strong>TXT</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">"v=spf1 include:_spf.google.com ~all"</td><td>60</td></tr>
+                
+                <tr><td><strong>TXT</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">"v=spf1 include:_spf.google.com ~all"</td><td>45</td></tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 4. GEOLOCATION -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">📍 Geolocation</div>
+        <div class="section-body">
+            <div class="grid-2">
+                <div>
+                    <div class="metric-row"><span class="metric-label">IP</span><span class="metric-val">13.205.146.16</span></div>
+                    <div class="metric-row"><span class="metric-label">Country</span><span class="metric-val">India</span></div>
+                    <div class="metric-row"><span class="metric-label">City</span><span class="metric-val">Mumbai</span></div>
+                    <div class="metric-row"><span class="metric-label">Region</span><span class="metric-val">Maharashtra</span></div>
+                </div>
+                <div>
+                    <div class="metric-row"><span class="metric-label">ISP</span><span class="metric-val">Amazon.com, Inc.</span></div>
+                    <div class="metric-row"><span class="metric-label">Organization</span><span class="metric-val">Amazon.com, Inc.</span></div>
+                    <div class="metric-row"><span class="metric-label">ASN</span><span class="metric-val">AS16509</span></div>
+                    <div class="metric-row"><span class="metric-label">Timezone</span><span class="metric-val">Asia/Kolkata</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 5. SSL/TLS -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🔒 SSL / TLS Configuration</div>
+        <div class="section-body">
+            <div class="two-col-layout">
+                
+                <div>
+                    <h4 style="font-size: 13px; margin-bottom: 8px;">Certificate Details</h4>
+                    <div class="metric-row"><span class="metric-label">Issuer</span><span class="metric-val">C: US, O: Amazon, CN: Amazon RSA 2048 M04</span></div>
+                    <div class="metric-row"><span class="metric-label">Valid Until</span><span class="metric-val">Nov 17, 2026</span></div>
+                    <div class="metric-row"><span class="metric-label">Expired</span><span class="metric-val"><span class="no">✓ No</span></span></div>
+                </div>
+                
+                
+                <div>
+                    <h4 style="font-size: 13px; margin-bottom: 8px;">Protocol Support</h4>
+                    <table>
+                        <tr><th>TLS v1.0</th><th>TLS v1.1</th><th>TLS v1.2</th><th>TLS v1.3</th></tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                        <tr>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ No</span></td>
+                            <td><span class="no">✓ Yes</span></td>
+                            <td><span class="partial">⚠ No</span></td>
+                        </tr>
+                        
+                    </table>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 6. PORTS & SERVICES -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🔌 Open Ports & Services <span class="count">2</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Port</th><th>Protocol</th><th>Service</th><th>Version</th></tr>
+                
+                <tr>
+                    <td><strong>80</strong></td>
+                    <td>tcp</td>
+                    <td>http</td>
+                    <td style="color: #718096;">HTTP/1.1 301 Moved Permanently</td>
+                </tr>
+                
+                <tr>
+                    <td><strong>443</strong></td>
+                    <td>tcp</td>
+                    <td>https</td>
+                    <td style="color: #718096;">HTTP/1.1 301 Moved Permanently</td>
+                </tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 7. TRACEROUTE -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 8. SUBDOMAINS -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🏗️ Attack Surface — Subdomains <span class="count">35</span></div>
+        <div class="section-body">
+            <div style="max-height: 300px; overflow-y: auto;">
+                <ul class="sub-list">
+                
+                    <li><span class="bullet">&#9656;</span> lyncdiscover.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> placement.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> admin.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> autodiscover.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> mail.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> exams.srcas.ac.in <span style="color: #718096; font-size: 11px;">(202.129.196.99)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> 2fwww.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> results.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> result.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> ftp.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> icsdt.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.srcas.ac.in <span style="color: #718096; font-size: 11px;">(13.205.146.16)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> sip.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> admission.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> enterpriseenrollment.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> test.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> coe.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.exams.srcas.ac.in <span style="color: #718096; font-size: 11px;">(202.129.196.99)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> msoid.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> mis.srcas.ac.in <span style="color: #718096; font-size: 11px;">(202.129.196.102)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> autoconfig.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> cpanel.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> moodle.srcas.ac.in <span style="color: #718096; font-size: 11px;">(13.205.146.16)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> alumni.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> lms.srcas.ac.in <span style="color: #718096; font-size: 11px;">(202.129.196.106)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> webdisk.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> journals.srcas.ac.in <span style="color: #718096; font-size: 11px;">(13.205.201.58)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> webmail.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> srcas.ac.in <span style="color: #718096; font-size: 11px;">(13.205.146.16)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.moodle.srcas.ac.in <span style="color: #718096; font-size: 11px;">(13.205.146.16)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.result.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.results.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> admin.placement.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.mis.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                    <li><span class="bullet">&#9656;</span> www.coe.srcas.ac.in <span style="color: #718096; font-size: 11px;">(N/A)</span></li>
+                
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 9. WEB TECHNOLOGIES -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">⚙️ Web Technologies <span class="count">1</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Name</th><th>Category</th><th>Version</th></tr>
+                
+                <tr><td><strong>Nginx</strong></td><td>Web Server</td><td>1.24.0</td></tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 10. DIRECTORY ENUMERATION -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">📁 Directory Enumeration <span class="count">30</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Path</th><th>Status</th></tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/wp-admin/ [ROBOTS]</td>
+                    <td><span class="badge badge-info">200</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/public</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/api</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/config</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/robots.txt</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/login</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/wp-admin</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/images</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/uploads</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/backup.zip</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/admin</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/dashboard</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/.git</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/js</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/css</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/assets</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/static</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/backup</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/wp-content</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/files</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/db</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/wordpress</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/media</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/.well-known</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/sitemap.xml</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/crossdomain.xml</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/.well-known/security.txt</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/security.txt</td>
+                    <td><span class="badge badge-medium">301</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/.env</td>
+                    <td><span class="badge badge-low">403</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">/config.php</td>
+                    <td><span class="badge badge-low">403</span></td>
+                </tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 11. HTTP METHOD ENUMERATION -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 12. RESPONSE CODE MAP -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 13. AUTH PAGES -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🔑 Authentication Pages Found <span class="count">161</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>URL</th><th>Type</th><th>Status</th><th>Login Form</th><th>Password Reset</th></tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/login</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/auth</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/administrator</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signin</td>
+                    <td>login</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="partial">Yes</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/cpanel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/dashboard</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/panel</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/reset</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot-password</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/signup</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/forgot</td>
+                    <td>password_reset</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="partial">Yes</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/wp-admin</td>
+                    <td>admin</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/register</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/create-account</td>
+                    <td>registration</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/2fa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/two-factor</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/mfa</td>
+                    <td>mfa</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/my-account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/account</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/user</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">http://srcas.ac.in/profile</td>
+                    <td>account</td>
+                    <td><span class="badge badge-low">301</span></td>
+                    <td><span class="no">No</span></td>
+                    <td><span class="no">No</span></td>
+                </tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 14. WEB FORMS -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 15. COOKIE AUDIT -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 16. DNS ZONE TRANSFER -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 17. SECURITY FINDINGS -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🚨 Security Issues & Vulnerabilities <span class="count">53</span></div>
+        <div class="section-body">
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>API Endpoint: /api/admin</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">API endpoint accessible at https://srcas.ac.in/api/admin with possible sensitive data</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>API Endpoint: /api/user</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">API endpoint accessible at https://srcas.ac.in/api/user with possible sensitive data</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Advanced OS Fingerprint: Unknown</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">TCP/IP stack fingerprint: TTL=64, Window=Unknown, IP ID=None</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>CSP: No default-src or script-src (no script restrictions)</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Content Security Policy issue: No default-src or script-src (no script restrictions)</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Cloud Infrastructure: AWS</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">IP 13.205.201.58 appears to be hosted on AWS</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Host Header Injection</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Server reflects Host header value in response. Tested: 0.0.0.0</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #e53e3e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>IP Blacklisted: AHBL</span>
+                    <span class="badge badge-high">High</span>
+                </div>
+                <div class="ti-details">Target IP 13.205.146.16 listed on DNSBLs: AHBL</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Information Disclosure: Verbose server header: nginx/1.24.0 (Ubuntu)</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">Verbose server header: nginx/1.24.0 (Ubuntu)</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing DKIM Record</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">No DKIM record found for srcas.ac.in.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing Header: HSTS</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">The site is missing the HSTS security header.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing Header: Permissions-Policy</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">The site is missing the Permissions-Policy security header.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing Header: Referrer-Policy</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">The site is missing the Referrer-Policy security header.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing Header: X-Content-Type-Options</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">The site is missing the X-Content-Type-Options security header.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing Header: X-Frame-Options</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">The site is missing the X-Frame-Options security header.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Missing Header: X-XSS-Protection</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">The site is missing the X-XSS-Protection security header.</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>No Rate Limiting Detected</span>
+                    <span class="badge badge-low">Low</span>
+                </div>
+                <div class="ti-details">Server allowed 15 requests in 7.1s without rate limiting</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: continue parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'continue' reflects external URL in redirect: https://www.srcas.ac.in/?continue=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: dest parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'dest' reflects external URL in redirect: https://www.srcas.ac.in/?dest=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: destination parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'destination' reflects external URL in redirect: https://www.srcas.ac.in/?destination=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: dir parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'dir' reflects external URL in redirect: https://www.srcas.ac.in/?dir=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: follow parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'follow' reflects external URL in redirect: https://www.srcas.ac.in/?follow=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: forward parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'forward' reflects external URL in redirect: https://www.srcas.ac.in/?forward=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: goto parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'goto' reflects external URL in redirect: https://www.srcas.ac.in/?goto=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: href parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'href' reflects external URL in redirect: https://www.srcas.ac.in/?href=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: link parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'link' reflects external URL in redirect: https://www.srcas.ac.in/?link=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: load parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'load' reflects external URL in redirect: https://www.srcas.ac.in/?load=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: location parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'location' reflects external URL in redirect: https://www.srcas.ac.in/?location=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: next parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'next' reflects external URL in redirect: https://www.srcas.ac.in/?next=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: out parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'out' reflects external URL in redirect: https://www.srcas.ac.in/?out=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: page parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'page' reflects external URL in redirect: https://www.srcas.ac.in/?page=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: path parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'path' reflects external URL in redirect: https://www.srcas.ac.in/?path=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: proxy parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'proxy' reflects external URL in redirect: https://www.srcas.ac.in/?proxy=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: redirect parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'redirect' reflects external URL in redirect: https://www.srcas.ac.in/?redirect=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: redirect_uri parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'redirect_uri' reflects external URL in redirect: https://www.srcas.ac.in/?redirect_uri=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: redirect_url parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'redirect_url' reflects external URL in redirect: https://www.srcas.ac.in/?redirect_url=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: ref parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'ref' reflects external URL in redirect: https://www.srcas.ac.in/?ref=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: referer parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'referer' reflects external URL in redirect: https://www.srcas.ac.in/?referer=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: return parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'return' reflects external URL in redirect: https://www.srcas.ac.in/?return=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: return_to parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'return_to' reflects external URL in redirect: https://www.srcas.ac.in/?return_to=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: return_url parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'return_url' reflects external URL in redirect: https://www.srcas.ac.in/?return_url=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: site parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'site' reflects external URL in redirect: https://www.srcas.ac.in/?site=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: target parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'target' reflects external URL in redirect: https://www.srcas.ac.in/?target=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: to parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'to' reflects external URL in redirect: https://www.srcas.ac.in/?to=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: url parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'url' reflects external URL in redirect: https://www.srcas.ac.in/?url=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Open Redirect: view parameter</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">Parameter 'view' reflects external URL in redirect: https://www.srcas.ac.in/?view=https://evil.com/</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Reverse IP: Co-hosted Domains</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">IP 13.205.201.58 hosts 1 domains including: ec2-13-205-201-58.ap-south-1.compute.amazonaws.com</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>SMTP Banner: smtp.google.com.</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">Banner: 220 mx.google.com ESMTP 5a478bee46e88-313c1cea01fsi56908437eec.12 - gsmtp</div>
+                
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>SMTP Server: smtp.google.com</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">Banner: 220 mx.google.com ESMTP a92af1059eb24-13cd401e594si1472005c88.0 - gsmtp</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Subdomain: lms.srcas.ac.in</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">Brute-forced subdomain resolves to 202.129.196.106</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Subdomain: moodle.srcas.ac.in</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">Brute-forced subdomain resolves to 13.205.146.16</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Subdomain: www.srcas.ac.in</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">Brute-forced subdomain resolves to 13.205.146.16</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #d69e2e;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>TOR Exit Node</span>
+                    <span class="badge badge-medium">Medium</span>
+                </div>
+                <div class="ti-details">IP 13.205.201.58 is a TOR exit node</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+            <div class="ti-card" style="border-left-color: #3182ce;">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>Tech Stack: Nginx v1.24.0</span>
+                    <span class="badge badge-low">Info</span>
+                </div>
+                <div class="ti-details">Technology identified: Nginx (Web Server) - detected via HTTP Header. Version: 1.24.0</div>
+                <div style="margin-top: 5px; font-size: 11px; color: #718096;">https://srcas.ac.in</div>
+            </div>
+            
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 18. WEB ANALYSIS FINDINGS -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🔍 Web Analysis Findings <span class="count">25</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Finding</th><th>Severity</th><th>Details</th></tr>
+                
+                <tr>
+                    <td>[Web Analysis] 403 on /.env</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Response 403 for /.env</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] 403 on /.htaccess</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Response 403 for /.htaccess</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Auth Page: account</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">http://srcas.ac.in/user [301]</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Auth Page: admin</td>
+                    <td><span class="badge badge-medium">Medium</span></td>
+                    <td style="font-size: 12px;">http://srcas.ac.in/administrator [301]</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Auth Page: login</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">http://srcas.ac.in/login [301]</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Auth Page: mfa</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">http://srcas.ac.in/mfa [301]</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Auth Page: password_reset</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">http://srcas.ac.in/forgot [301]</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Auth Page: registration</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">http://srcas.ac.in/register [301]</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] CMS Detected: Magento</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Content Management System: Magento</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /admin</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /administrator</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /api</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /backup</td>
+                    <td><span class="badge badge-high">High</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /config</td>
+                    <td><span class="badge badge-high">High</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /dashboard</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /debug</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /dev</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /files</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /images</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /login</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /staging</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /test</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /upload</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Directory: /uploads</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Status: 301, Length: 134</td>
+                </tr>
+                
+                <tr>
+                    <td>[Web Analysis] Favicon Hash: 07f043121c6c115aaf9636b36ed844c3</td>
+                    <td><span class="badge badge-info">Info</span></td>
+                    <td style="font-size: 12px;">Search Shodan: http.favicon.hash:07f043121c6c115aaf9636b36ed844c3</td>
+                </tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 19. THREAT INTELLIGENCE -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">☠️ Threat Intelligence</div>
+        <div class="section-body">
+            
+            <div class="ti-card">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>AlienVault OTX</span>
+                    <span class="badge badge-info">Score: 0</span>
+                </div>
+                <div style="font-size: 12px; color: #718096;">
+                    <strong>Type:</strong> domain | <strong>Value:</strong> srcas.ac.in
+                </div>
+                <div class="ti-details">
+                    
+                    <div><strong>Pulses:</strong> 0</div>
+                    
+                </div>
+            </div>
+            
+            <div class="ti-card">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>VirusTotal</span>
+                    <span class="badge badge-info">Score: 0</span>
+                </div>
+                <div style="font-size: 12px; color: #718096;">
+                    <strong>Type:</strong> domain | <strong>Value:</strong> srcas.ac.in
+                </div>
+                <div class="ti-details">
+                    
+                    <div>Malicious: <span style="color:#e53e3e;">0</span> | Suspicious: <span style="color:#d69e2e;">0</span> | Harmless: <span style="color:#38a169;">58</span></div>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 20. IP REPUTATION & BLACKLIST -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🛡️ IP Reputation & Blacklist Status</div>
+        <div class="section-body">
+            
+            <table>
+                <tr><th>IP</th><th>Blacklisted</th><th>Score</th><th>Reports</th><th>Sources</th><th>ISP</th></tr>
+                
+                <tr>
+                    <td><strong>3.108.14.95</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td>Amazon Data Services India</td>
+                </tr>
+                
+                <tr>
+                    <td><strong>3.108.14.95</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td></td>
+                </tr>
+                
+                <tr>
+                    <td><strong>3.108.14.95</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td></td>
+                </tr>
+                
+                <tr>
+                    <td><strong>3.108.14.95</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td></td>
+                </tr>
+                
+                <tr>
+                    <td><strong>13.205.201.58</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td>Amazon Technologies Inc.</td>
+                </tr>
+                
+                <tr>
+                    <td><strong>13.205.146.16</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td>Amazon Technologies Inc.</td>
+                </tr>
+                
+                <tr>
+                    <td><strong>13.205.146.16</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td>Amazon Technologies Inc.</td>
+                </tr>
+                
+                <tr>
+                    <td><strong>13.205.201.58</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td>Amazon Technologies Inc.</td>
+                </tr>
+                
+                <tr>
+                    <td><strong>13.205.146.16</strong></td>
+                    <td><span class="badge badge-critical">YES</span></td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td style="font-size: 11px;">AHBL</td>
+                    <td>Amazon Technologies Inc.</td>
+                </tr>
+                
+            </table>
+            
+            
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 21. BGP / ASN INFORMATION -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🌍 BGP / ASN Information</div>
+        <div class="section-body">
+            <table>
+                <tr><th>IP</th><th>ASN</th><th>Organization</th><th>Country</th></tr>
+                
+                <tr>
+                    <td>13.205.146.16</td>
+                    <td><strong>16509</strong></td>
+                    <td>Amazon.com, Inc.</td>
+                    <td>India</td>
+                </tr>
+                
+                <tr>
+                    <td>3.108.14.95</td>
+                    <td><strong>16509</strong></td>
+                    <td>Amazon.com, Inc.</td>
+                    <td>India</td>
+                </tr>
+                
+            </table>
+            
+            <h4 style="font-size: 12px; margin: 10px 0 5px; color: #4a5568;">BGP Routes</h4>
+            <pre style="font-size: 11px; background: #f7fafc; padding: 8px; border-radius: 4px; white-space: pre-wrap;">"16509","AMAZON-02, US"
+202.128.99.0/24
+18.66.220.0/23
+52.92.152.0/21
+18.65.32.0/21
+2600:f0fb:f029::/48
+51.3.0.0/16
+2600:9000:30c5::/48
+3.5.99.0/24
+3.164.183.0/24</pre>
+            
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 22. PROTOCOL ENUMERATION (SNMP, SMB, LDAP, NTP, SMTP) -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 23. BREACH INTELLIGENCE -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 24. EMAIL & CONTACTS -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 25. SEARCH INTELLIGENCE -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">🔎 Search Intelligence <span class="count">3</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Risk</th><th>Source</th><th>Title / Snippet</th></tr>
+                
+                <tr>
+                    <td><span class="badge badge-medium">Medium</span></td>
+                    <td>GitHub</td>
+                    <td style="font-size: 12px;">proclub-srcas/SRCAS-Hackathon-2.0:README.md</td>
+                </tr>
+                
+                <tr>
+                    <td><span class="badge badge-high">High</span></td>
+                    <td>GitHub</td>
+                    <td style="font-size: 12px;">brittytino/SHE:components/auth/login.tsx</td>
+                </tr>
+                
+                <tr>
+                    <td><span class="badge badge-medium">Medium</span></td>
+                    <td>GitHub</td>
+                    <td style="font-size: 12px;">is-a-dev/register:domains/suryacs.json</td>
+                </tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- 26. SOCIAL MEDIA PROFILES -->
+    <!-- ============================================================ -->
+    
+
+    <!-- ============================================================ -->
+    <!-- 27. HISTORICAL DATA -->
+    <!-- ============================================================ -->
+    
+    <div class="section">
+        <div class="section-title">📜 Historical Intelligence <span class="count">2</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Source</th><th>Snapshots</th><th>First Seen</th><th>Last Seen</th><th>Status</th></tr>
+                
+                <tr>
+                    <td>WaybackMachine</td>
+                    <td>100</td>
+                    <td>2017-07-28</td>
+                    <td>2021-11-02</td>
+                    <td><span class="badge badge-low">Available</span></td>
+                </tr>
+                
+                <tr>
+                    <td>Archive.today</td>
+                    <td>0</td>
+                    <td></td>
+                    <td></td>
+                    <td><span class="badge badge-low">Not Found</span></td>
+                </tr>
+                
+            </table>
+        </div>
+    </div>
+    
+
+    <!-- ============================================================ -->
+    <!-- FOOTER -->
+    <!-- ============================================================ -->
+    <div class="footer">
+        <p>Generated by <strong>Argus OSINT Framework</strong> | 2026-07-16 18:38:05</p>
+        <p>CONFIDENTIAL — Authorized Use Only</p>
+        <p style="margin-top: 5px; font-size: 9px;">This report contains intelligence gathered from publicly available sources.</p>
+    </div>
+</div>
+</body>
+</html>
