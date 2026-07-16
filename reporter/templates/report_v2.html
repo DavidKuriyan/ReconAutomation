@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Argus OSINT Report - {{ data.target.domain }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; background: #f8f9fc; line-height: 1.5; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        /* HEADER */
+        .header { background: linear-gradient(135deg, #0d1117 0%, #1a1a3e 100%); color: #00ff9d; padding: 30px 40px; text-align: center; border-bottom: 4px solid #00ff9d; margin-bottom: 30px; position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(0,240,255,0.05) 0%, transparent 70%); }
+        .header img { height: 70px; width: 70px; border-radius: 50%; border: 3px solid #00ff9d; margin-bottom: 10px; object-fit: cover; }
+        .header h1 { font-size: 28px; letter-spacing: 3px; text-transform: uppercase; margin: 10px 0 5px; position: relative; }
+        .header p { color: #8892b0; font-size: 13px; letter-spacing: 1px; position: relative; }
+        .header .risk-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; }
+
+        /* SECTION */
+        .section { background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 25px; overflow: hidden; page-break-inside: avoid; border: 1px solid #e8ecf1; }
+        .section-title { font-size: 16px; font-weight: 700; color: #0d1117; padding: 15px 20px; background: #f0f4f8; border-bottom: 2px solid #00ff9d; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+        .section-title .count { font-size: 12px; background: #0d1117; color: #00ff9d; padding: 2px 10px; border-radius: 12px; }
+        .section-body { padding: 20px; }
+
+        /* TABLE */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f7f8fc; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 9px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f7fafc; }
+
+        /* METRIC ROW */
+        .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-label { color: #718096; font-weight: 500; }
+        .metric-val { font-weight: 600; color: #1a202c; }
+        .metric-val.warning { color: #ecc94b; }
+        .metric-val.danger { color: #e53e3e; }
+
+        /* BADGES */
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-critical { background: #fed7d7; color: #c53030; border: 1px solid #feb2b2; }
+        .badge-high { background: #fefcbf; color: #975a16; border: 1px solid #f6e05e; }
+        .badge-medium { background: #bee3f8; color: #2b6cb0; border: 1px solid #90cdf4; }
+        .badge-low { background: #e2e8f0; color: #4a5568; border: 1px solid #cbd5e0; }
+        .badge-info { background: #c6f6d5; color: #276749; border: 1px solid #9ae6b4; }
+
+        /* CARDS GRID */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .stat-card { background: #fff; padding: 20px; text-align: center; border-radius: 8px; border: 1px solid #e8ecf1; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .stat-card .num { font-size: 32px; font-weight: 800; color: #0d1117; }
+        .stat-card .label { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+        .ti-card { background: #f7fafc; border-left: 4px solid #00ff9d; padding: 12px 15px; margin-bottom: 10px; border-radius: 0 6px 6px 0; }
+        .ti-source { font-weight: 700; font-size: 14px; margin-bottom: 5px; }
+        .ti-details { font-size: 12px; color: #4a5568; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+
+        .safe-tag { display: inline-block; background: #c6f6d5; color: #276749; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+        .risk-tag { display: inline-block; background: #fed7d7; color: #c53030; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+
+        .footer { text-align: center; font-size: 10px; color: #a0aec0; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+
+        .sub-list { list-style: none; padding: 0; }
+        .sub-list li { padding: 6px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; font-family: 'Courier New', monospace; }
+        .sub-list li:last-child { border-bottom: none; }
+        .sub-list li .bullet { color: #00ff9d; font-weight: bold; }
+
+        .two-col-layout { display: flex; gap: 16px; flex-wrap: wrap; }
+        .two-col-layout > div { flex: 1; min-width: 280px; }
+
+        /* NEGATIVE / POSITIVE INDICATORS */
+        .yes { color: #e53e3e; font-weight: bold; }
+        .no { color: #38a169; font-weight: bold; }
+        .partial { color: #d69e2e; font-weight: bold; }
+
+        @media print {
+            .section { break-inside: avoid; }
+            .grid-2, .grid-3 { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- ============================================================ -->
+    <!-- HEADER -->
+    <!-- ============================================================ -->
+    <div class="header">
+        {% if logo_path %}
+        <img src="{{ logo_path }}" alt="Logo">
+        {% endif %}
+        <h1>🛡️ ARGUS OSINT REPORT</h1>
+        <p>{{ data.target.domain }} | {{ date }} | Confidential</p>
+        <div class="risk-badge" style="background: {% if (data.target.risk_score or 0) > 60 %}#e53e3e{% elif (data.target.risk_score or 0) > 30 %}#d69e2e{% else %}#38a169{% endif %}; color: #fff;">
+            Risk Score: {{ data.target.risk_score or 0 }}/100
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- DASHBOARD STATS -->
+    <!-- ============================================================ -->
+    <div class="grid-3">
+        <div class="stat-card"><div class="num" style="color: #38a169;">{{ data.ports|length }}</div><div class="label">Open Ports</div></div>
+        <div class="stat-card"><div class="num" style="color: #3182ce;">{{ data.subdomains|length }}</div><div class="label">Subdomains</div></div>
+        <div class="stat-card"><div class="num" style="color: #d69e2e;">{{ data.technologies|length }}</div><div class="label">Technologies</div></div>
+        <div class="stat-card"><div class="num" style="color: #e53e3e;">{{ data.findings|length }}</div><div class="label">Findings</div></div>
+        <div class="stat-card"><div class="num" style="color: #805ad5;">{{ data.dns_records|length }}</div><div class="label">DNS Records</div></div>
+        <div class="stat-card"><div class="num" style="color: #dd6b20;">{{ data.threat_intel|length }}</div><div class="label">Threat Sources</div></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 1. TARGET OVERVIEW -->
+    <!-- ============================================================ -->
+    <div class="section">
+        <div class="section-title">🎯 Target Overview</div>
+        <div class="section-body">
+            <div class="metric-row"><span class="metric-label">Domain</span><span class="metric-val">{{ data.target.domain }}</span></div>
+            <div class="metric-row"><span class="metric-label">Scan Date</span><span class="metric-val">{{ date }}</span></div>
+            <div class="metric-row"><span class="metric-label">Risk Score</span><span class="metric-val {% if (data.target.risk_score or 0) > 60 %}danger{% elif (data.target.risk_score or 0) > 30 %}warning{% endif %}">{{ data.target.risk_score or 0 }}/100</span></div>
+            {% if data.geolocation %}
+            <div class="metric-row"><span class="metric-label">Location</span><span class="metric-val">{{ data.geolocation.city or '' }}, {{ data.geolocation.country or '' }} ({{ data.geolocation.isp or '' }})</span></div>
+            <div class="metric-row"><span class="metric-label">ASN</span><span class="metric-val">{{ data.geolocation.asn or '' }} - {{ data.geolocation.asn_org or '' }}</span></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 2. DOMAIN IDENTITY & WHOIS -->
+    <!-- ============================================================ -->
+    <div class="section">
+        <div class="section-title">📋 Domain Identity & WHOIS</div>
+        <div class="section-body">
+            {% if data.domain_info %}
+            <div class="metric-row"><span class="metric-label">Registrar</span><span class="metric-val">{{ data.domain_info.registrar or 'N/A' }}</span></div>
+            <div class="metric-row"><span class="metric-label">Created</span><span class="metric-val">{{ data.domain_info.creation_date or 'N/A' }}</span></div>
+            <div class="metric-row"><span class="metric-label">Expires</span><span class="metric-val">{{ data.domain_info.expiration_date or 'N/A' }}</span></div>
+            <div class="metric-row"><span class="metric-label">Registrant</span><span class="metric-val">{{ data.domain_info.registrant_name or 'Redacted (GDPR)' }}</span></div>
+            <div class="metric-row"><span class="metric-label">Email</span><span class="metric-val">{{ data.domain_info.registrant_email or 'Redacted' }}</span></div>
+            {% else %}
+            <p style="color: #718096;">No WHOIS data available.</p>
+            {% endif %}
+            {% if data.rir_whois %}
+            <h4 style="margin-top: 15px; font-size: 13px; color: #4a5568;">RIR WHOIS Records</h4>
+            <table>
+                <tr><th>RIR</th><th>Net Range</th><th>Organization</th></tr>
+                {% for r in data.rir_whois %}
+                <tr><td>{{ r.rir_name or 'N/A' }}</td><td>{{ r.net_range or '' }}</td><td>{{ r.organization or '' }}</td></tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            {% if data.whois_history %}
+            <h4 style="margin-top: 15px; font-size: 13px; color: #4a5568;">Historical WHOIS Records</h4>
+            <table>
+                <tr><th>Date</th><th>Registrar</th><th>Registrant</th><th>Source</th></tr>
+                {% for h in data.whois_history[:5] %}
+                <tr><td>{{ h.snapshot_date or '' }}</td><td>{{ h.registrar or '' }}</td><td>{{ h.registrant_name or '' }}</td><td>{{ h.source or '' }}</td></tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 3. DNS RECORDS -->
+    <!-- ============================================================ -->
+    {% if data.dns_records %}
+    <div class="section">
+        <div class="section-title">🌐 DNS Records <span class="count">{{ data.dns_records|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Type</th><th>Value</th><th>TTL</th></tr>
+                {% for r in data.dns_records %}
+                <tr><td><strong>{{ r.record_type }}</strong></td><td style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px;">{{ r.value }}</td><td>{{ r.ttl or '' }}</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 4. GEOLOCATION -->
+    <!-- ============================================================ -->
+    {% if data.geolocation %}
+    <div class="section">
+        <div class="section-title">📍 Geolocation</div>
+        <div class="section-body">
+            <div class="grid-2">
+                <div>
+                    <div class="metric-row"><span class="metric-label">IP</span><span class="metric-val">{{ data.geolocation.ip_address }}</span></div>
+                    <div class="metric-row"><span class="metric-label">Country</span><span class="metric-val">{{ data.geolocation.country }}</span></div>
+                    <div class="metric-row"><span class="metric-label">City</span><span class="metric-val">{{ data.geolocation.city }}</span></div>
+                    <div class="metric-row"><span class="metric-label">Region</span><span class="metric-val">{{ data.geolocation.region }}</span></div>
+                </div>
+                <div>
+                    <div class="metric-row"><span class="metric-label">ISP</span><span class="metric-val">{{ data.geolocation.isp }}</span></div>
+                    <div class="metric-row"><span class="metric-label">Organization</span><span class="metric-val">{{ data.geolocation.organization }}</span></div>
+                    <div class="metric-row"><span class="metric-label">ASN</span><span class="metric-val">{{ data.geolocation.asn }}</span></div>
+                    <div class="metric-row"><span class="metric-label">Timezone</span><span class="metric-val">{{ data.geolocation.timezone }}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 5. SSL/TLS -->
+    <!-- ============================================================ -->
+    {% if data.ssl_info or data.ssl_config %}
+    <div class="section">
+        <div class="section-title">🔒 SSL / TLS Configuration</div>
+        <div class="section-body">
+            <div class="two-col-layout">
+                {% if data.ssl_info %}
+                <div>
+                    <h4 style="font-size: 13px; margin-bottom: 8px;">Certificate Details</h4>
+                    <div class="metric-row"><span class="metric-label">Issuer</span><span class="metric-val">{{ data.ssl_info.issuer or '' }}</span></div>
+                    <div class="metric-row"><span class="metric-label">Valid Until</span><span class="metric-val">{{ data.ssl_info.valid_to or '' }}</span></div>
+                    <div class="metric-row"><span class="metric-label">Expired</span><span class="metric-val">{% if data.ssl_info.has_expired %}<span class="yes">⚠ YES</span>{% else %}<span class="no">✓ No</span>{% endif %}</span></div>
+                </div>
+                {% endif %}
+                {% if data.ssl_config %}
+                <div>
+                    <h4 style="font-size: 13px; margin-bottom: 8px;">Protocol Support</h4>
+                    <table>
+                        <tr><th>TLS v1.0</th><th>TLS v1.1</th><th>TLS v1.2</th><th>TLS v1.3</th></tr>
+                        {% for s in data.ssl_config %}
+                        <tr>
+                            <td>{% if s.supports_tls_v1 %}<span class="partial">⚠️ Yes</span>{% else %}<span class="no">✓ No</span>{% endif %}</td>
+                            <td>{% if s.supports_tls_v11 %}<span class="partial">⚠️ Yes</span>{% else %}<span class="no">✓ No</span>{% endif %}</td>
+                            <td>{% if s.supports_tls_v12 %}<span class="no">✓ Yes</span>{% else %}<span class="partial">⚠ No</span>{% endif %}</td>
+                            <td>{% if s.supports_tls_v13 %}<span class="no">✓ Yes</span>{% else %}<span class="partial">⚠ No</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 6. PORTS & SERVICES -->
+    <!-- ============================================================ -->
+    {% if data.ports %}
+    <div class="section">
+        <div class="section-title">🔌 Open Ports & Services <span class="count">{{ data.ports|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Port</th><th>Protocol</th><th>Service</th><th>Version</th></tr>
+                {% for p in data.ports %}
+                <tr>
+                    <td><strong>{{ p.port }}</strong></td>
+                    <td>{{ p.protocol or 'tcp' }}</td>
+                    <td>{{ p.service or 'unknown' }}</td>
+                    <td style="color: #718096;">{{ p.version or '' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 7. TRACEROUTE -->
+    <!-- ============================================================ -->
+    {% if data.traceroute %}
+    <div class="section">
+        <div class="section-title">🛰️ Traceroute</div>
+        <div class="section-body">
+            {% for t in data.traceroute %}
+            <div class="metric-row"><span class="metric-label">Target</span><span class="metric-val">{{ t.target_host }}</span></div>
+            <div class="metric-row"><span class="metric-label">Hops</span><span class="metric-val">{{ t.hop_count }}</span></div>
+            <div class="metric-row"><span class="metric-label">Avg RTT</span><span class="metric-val">{{ t.avg_rtt_ms }} ms</span></div>
+            {% if t.hops_json %}
+            <h4 style="font-size: 12px; margin: 10px 0 5px; color: #4a5568;">Hop Details</h4>
+            <div style="font-size: 11px; font-family: 'Courier New', monospace; background: #f7fafc; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;">{{ t.hops_json[:500] }}</div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 8. SUBDOMAINS -->
+    <!-- ============================================================ -->
+    {% if data.subdomains %}
+    <div class="section">
+        <div class="section-title">🏗️ Attack Surface — Subdomains <span class="count">{{ data.subdomains|length }}</span></div>
+        <div class="section-body">
+            <div style="max-height: 300px; overflow-y: auto;">
+                <ul class="sub-list">
+                {% for s in data.subdomains %}
+                    <li><span class="bullet">&#9656;</span> {{ s.subdomain }} <span style="color: #718096; font-size: 11px;">({{ s.ip_address or 'N/A' }})</span></li>
+                {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 9. WEB TECHNOLOGIES -->
+    <!-- ============================================================ -->
+    {% if data.technologies %}
+    <div class="section">
+        <div class="section-title">⚙️ Web Technologies <span class="count">{{ data.technologies|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Name</th><th>Category</th><th>Version</th></tr>
+                {% for t in data.technologies %}
+                <tr><td><strong>{{ t.name }}</strong></td><td>{{ t.category or '' }}</td><td>{{ t.version or '' }}</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 10. DIRECTORY ENUMERATION -->
+    <!-- ============================================================ -->
+    {% if data.directories %}
+    <div class="section">
+        <div class="section-title">📁 Directory Enumeration <span class="count">{{ data.directories|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Path</th><th>Status</th></tr>
+                {% for d in data.directories %}
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">{{ d.path }}</td>
+                    <td><span class="badge {% if d.status_code == 200 %}badge-info{% elif d.status_code < 400 %}badge-medium{% else %}badge-low{% endif %}">{{ d.status_code }}</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 11. HTTP METHOD ENUMERATION -->
+    <!-- ============================================================ -->
+    {% if data.http_methods %}
+    <div class="section">
+        <div class="section-title">📮 HTTP Method Enumeration</div>
+        <div class="section-body">
+            <table>
+                <tr><th>URL</th><th>Method</th><th>Status</th><th>Allowed</th></tr>
+                {% for m in data.http_methods %}
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">{{ m.url }}</td>
+                    <td><strong>{{ m.method }}</strong></td>
+                    <td>{{ m.status_code or '' }}</td>
+                    <td>{% if m.allowed %}<span class="safe-tag">Allowed</span>{% else %}<span class="risk-tag">Blocked</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 12. RESPONSE CODE MAP -->
+    <!-- ============================================================ -->
+    {% if data.response_codes %}
+    <div class="section">
+        <div class="section-title">📊 Response Code Map</div>
+        <div class="section-body">
+            <table>
+                <tr><th>URL / Path</th><th>Status</th><th>Length</th><th>Type</th></tr>
+                {% for r in data.response_codes %}
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">{{ r.url }}</td>
+                    <td><span class="badge {% if r.status_code == 200 %}badge-info{% elif r.status_code < 400 %}badge-medium{% else %}badge-low{% endif %}">{{ r.status_code }}</span></td>
+                    <td>{{ r.content_length or '' }}</td>
+                    <td style="font-size: 11px;">{{ r.content_type or '' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 13. AUTH PAGES -->
+    <!-- ============================================================ -->
+    {% if data.auth_pages %}
+    <div class="section">
+        <div class="section-title">🔑 Authentication Pages Found <span class="count">{{ data.auth_pages|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>URL</th><th>Type</th><th>Status</th><th>Login Form</th><th>Password Reset</th></tr>
+                {% for a in data.auth_pages %}
+                <tr>
+                    <td style="font-family: 'Courier New', monospace; font-size: 12px;">{{ a.page_url }}</td>
+                    <td>{{ a.auth_type or '' }}</td>
+                    <td><span class="badge {% if a.status_code == 200 %}badge-info{% else %}badge-low{% endif %}">{{ a.status_code }}</span></td>
+                    <td>{% if a.has_login_form %}<span class="partial">Yes</span>{% else %}<span class="no">No</span>{% endif %}</td>
+                    <td>{% if a.has_password_reset %}<span class="partial">Yes</span>{% else %}<span class="no">No</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 14. WEB FORMS -->
+    <!-- ============================================================ -->
+    {% if data.web_forms %}
+    <div class="section">
+        <div class="section-title">📝 Web Forms Identified <span class="count">{{ data.web_forms|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Page</th><th>Action</th><th>Method</th><th>Type</th><th>Password?</th><th>Upload?</th></tr>
+                {% for f in data.web_forms %}
+                <tr>
+                    <td style="font-size: 11px;">{{ f.page_url or '' }}</td>
+                    <td style="font-family: 'Courier New', monospace;">{{ f.form_action or '' }}</td>
+                    <td>{{ f.form_method }}</td>
+                    <td>{{ f.form_type or '' }}</td>
+                    <td>{% if f.has_password_field %}<span class="partial">⚠️ Yes</span>{% else %}<span class="no">No</span>{% endif %}</td>
+                    <td>{% if f.has_file_upload %}<span class="partial">⚠️ Yes</span>{% else %}<span class="no">No</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 15. COOKIE AUDIT -->
+    <!-- ============================================================ -->
+    {% if data.cookie_audit %}
+    <div class="section">
+        <div class="section-title">🍪 Cookie Security Audit <span class="count">{{ data.cookie_audit|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Cookie</th><th>Domain</th><th>Secure</th><th>HttpOnly</th><th>SameSite</th></tr>
+                {% for c in data.cookie_audit %}
+                <tr>
+                    <td><strong>{{ c.cookie_name }}</strong></td>
+                    <td>{{ c.domain }}</td>
+                    <td>{% if c.secure_flag %}<span class="no">✓</span>{% else %}<span class="yes">✗</span>{% endif %}</td>
+                    <td>{% if c.httponly %}<span class="no">✓</span>{% else %}<span class="yes">✗</span>{% endif %}</td>
+                    <td>{{ c.samesite or '' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 16. DNS ZONE TRANSFER -->
+    <!-- ============================================================ -->
+    {% if data.dns_zone %}
+    <div class="section">
+        <div class="section-title">🔄 DNS Zone Transfer</div>
+        <div class="section-body">
+            <table>
+                <tr><th>Nameserver</th><th>Transfer Allowed</th><th>Records</th></tr>
+                {% for z in data.dns_zone %}
+                <tr>
+                    <td style="font-family: 'Courier New', monospace;">{{ z.nameserver }}</td>
+                    <td>{% if z.zone_transfer_allowed %}<span class="risk-tag">⚠ YES</span>{% else %}<span class="safe-tag">No</span>{% endif %}</td>
+                    <td>{{ z.record_count or 0 }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 17. SECURITY FINDINGS -->
+    <!-- ============================================================ -->
+    {% if data.findings %}
+    <div class="section">
+        <div class="section-title">🚨 Security Issues & Vulnerabilities <span class="count">{{ data.findings|length }}</span></div>
+        <div class="section-body">
+            {% for f in data.findings %}
+            <div class="ti-card" style="border-left-color: {% if f.severity in ('Critical', 'High') %}#e53e3e{% elif f.severity == 'Medium' %}#d69e2e{% else %}#3182ce{% endif %};">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>{{ f.title }}</span>
+                    <span class="badge {% if f.severity == 'Critical' %}badge-critical{% elif f.severity == 'High' %}badge-high{% elif f.severity == 'Medium' %}badge-medium{% else %}badge-low{% endif %}">{{ f.severity }}</span>
+                </div>
+                <div class="ti-details">{{ f.description }}</div>
+                {% if f.url %}<div style="margin-top: 5px; font-size: 11px; color: #718096;">{{ f.url }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 18. WEB ANALYSIS FINDINGS -->
+    <!-- ============================================================ -->
+    {% if data.web_analysis %}
+    <div class="section">
+        <div class="section-title">🔍 Web Analysis Findings <span class="count">{{ data.web_analysis|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Finding</th><th>Severity</th><th>Details</th></tr>
+                {% for w in data.web_analysis %}
+                <tr>
+                    <td>{{ w.title }}</td>
+                    <td><span class="badge {% if w.severity == 'Critical' %}badge-critical{% elif w.severity == 'High' %}badge-high{% elif w.severity == 'Medium' %}badge-medium{% else %}badge-info{% endif %}">{{ w.severity }}</span></td>
+                    <td style="font-size: 12px;">{{ w.description }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 19. THREAT INTELLIGENCE -->
+    <!-- ============================================================ -->
+    {% if data.threat_intel %}
+    <div class="section">
+        <div class="section-title">☠️ Threat Intelligence</div>
+        <div class="section-body">
+            {% for item in data.threat_intel %}
+            <div class="ti-card">
+                <div class="ti-source" style="display: flex; justify-content: space-between;">
+                    <span>{{ item.source }}</span>
+                    <span class="badge {% if (item.threat_score or 0) > 50 %}badge-critical{% elif (item.threat_score or 0) > 20 %}badge-high{% else %}badge-info{% endif %}">Score: {{ item.threat_score }}</span>
+                </div>
+                <div style="font-size: 12px; color: #718096;">
+                    <strong>Type:</strong> {{ item.indicator_type }} | <strong>Value:</strong> {{ item.indicator_value }}
+                </div>
+                <div class="ti-details">
+                    {% if item.source == 'VirusTotal' %}
+                    <div>Malicious: <span style="color:#e53e3e;">{{ item.malicious_count }}</span> | Suspicious: <span style="color:#d69e2e;">{{ item.suspicious_count }}</span> | Harmless: <span style="color:#38a169;">{{ item.harmless_count }}</span></div>
+                    {% elif item.source == 'Shodan' %}
+                    <div><strong>ISP:</strong> {{ item.details.isp or 'N/A' }}</div>
+                    <div><strong>Ports:</strong> {{ item.details.ports|join(', ') }}</div>
+                    {% if item.details.vulns %}<div><strong>Vulns:</strong> {{ item.details.vulns|join(', ') }}</div>{% endif %}
+                    {% elif item.source == 'OTX' or item.source == 'AlienVault OTX' %}
+                    <div><strong>Pulses:</strong> {{ item.details.pulse_count or item.threat_score }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 20. IP REPUTATION & BLACKLIST -->
+    <!-- ============================================================ -->
+    {% if data.ip_reputation or data.dnsbl_results %}
+    <div class="section">
+        <div class="section-title">🛡️ IP Reputation & Blacklist Status</div>
+        <div class="section-body">
+            {% if data.ip_reputation %}
+            <table>
+                <tr><th>IP</th><th>Blacklisted</th><th>Score</th><th>Reports</th><th>Sources</th><th>ISP</th></tr>
+                {% for r in data.ip_reputation %}
+                <tr>
+                    <td><strong>{{ r.ip_address }}</strong></td>
+                    <td>{% if r.blacklisted %}<span class="badge badge-critical">YES</span>{% else %}<span class="badge badge-info">Clean</span>{% endif %}</td>
+                    <td>{{ r.threat_score or 0 }}</td>
+                    <td>{{ r.abuse_reports or 0 }}</td>
+                    <td style="font-size: 11px;">{{ r.blacklist_sources or '' }}</td>
+                    <td>{{ r.isp or '' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            {% if data.dnsbl_results %}
+            <h4 style="font-size: 13px; margin: 10px 0 5px; color: #4a5568;">DNSBL Check Results</h4>
+            <table>
+                <tr><th>Blacklist</th><th>Listed</th></tr>
+                {% for d in data.dnsbl_results %}
+                <tr>
+                    <td>{{ d.blacklist_source }}</td>
+                    <td>{% if d.listed %}<span class="risk-tag">Listed</span>{% else %}<span class="safe-tag">Clean</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 21. BGP / ASN INFORMATION -->
+    <!-- ============================================================ -->
+    {% if data.bgp_info %}
+    <div class="section">
+        <div class="section-title">🌍 BGP / ASN Information</div>
+        <div class="section-body">
+            <table>
+                <tr><th>IP</th><th>ASN</th><th>Organization</th><th>Country</th></tr>
+                {% for b in data.bgp_info %}
+                <tr>
+                    <td>{{ b.ip_address }}</td>
+                    <td><strong>{{ b.asn }}</strong></td>
+                    <td>{{ b.asn_name }}</td>
+                    <td>{{ b.asn_country }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% if data.bgp_info and data.bgp_info[0].asn_routes %}
+            <h4 style="font-size: 12px; margin: 10px 0 5px; color: #4a5568;">BGP Routes</h4>
+            <pre style="font-size: 11px; background: #f7fafc; padding: 8px; border-radius: 4px; white-space: pre-wrap;">{{ data.bgp_info[0].asn_routes[:500] }}</pre>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 22. PROTOCOL ENUMERATION (SNMP, SMB, LDAP, NTP, SMTP) -->
+    <!-- ============================================================ -->
+    {% if data.snmp_info or data.smb_shares or data.ldap_info or data.ntp_info or data.smtp_enum %}
+    <div class="section">
+        <div class="section-title">📡 Active Protocol Enumeration</div>
+        <div class="section-body">
+            <div class="two-col-layout">
+                {% if data.snmp_info %}
+                <div>
+                    <h4 style="font-size: 13px; margin-bottom: 5px;">SNMP</h4>
+                    {% for s in data.snmp_info %}
+                    <div class="metric-row"><span class="metric-label">Accessible</span><span class="metric-val">{% if s.accessible %}<span class="yes">⚠ Yes</span>{% else %}<span class="no">No</span>{% endif %}</span></div>
+                    <div class="metric-row"><span class="metric-label">System</span><span class="metric-val" style="font-size: 11px;">{{ (s.system_description or '')[:80] }}</span></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if data.smb_shares %}
+                <div>
+                    <h4 style="font-size: 13px; margin-bottom: 5px;">SMB Shares</h4>
+                    <table>
+                        <tr><th>Share</th><th>Type</th><th>Access</th></tr>
+                        {% for s in data.smb_shares %}
+                        <tr><td>{{ s.share_name }}</td><td>{{ s.share_type or '' }}</td><td>{% if s.accessible %}<span class="partial">Open</span>{% else %}<span class="no">Closed</span>{% endif %}</td></tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+            {% if data.ldap_info %}
+            <h4 style="font-size: 13px; margin: 10px 0 5px; color: #4a5568;">LDAP</h4>
+            <table>
+                <tr><th>Server</th><th>Port</th><th>Accessible</th><th>Base DN</th><th>SSL</th></tr>
+                {% for l in data.ldap_info %}
+                <tr>
+                    <td>{{ l.server }}</td>
+                    <td>{{ l.port or 389 }}</td>
+                    <td>{% if l.accessible %}<span class="partial">⚠ Yes</span>{% else %}<span class="no">No</span>{% endif %}</td>
+                    <td style="font-family: 'Courier New', monospace; font-size: 11px;">{{ l.base_dn or '' }}</td>
+                    <td>{% if l.ssl_supported %}<span class="no">✓</span>{% else %}<span class="partial">✗</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            {% if data.ntp_info %}
+            <h4 style="font-size: 13px; margin: 10px 0 5px; color: #4a5568;">NTP</h4>
+            <table>
+                <tr><th>Server</th><th>Peers</th><th>Monlist</th><th>Stratum</th></tr>
+                {% for n in data.ntp_info %}
+                <tr>
+                    <td>{{ n.server }}</td>
+                    <td>{{ n.peers_found or 0 }}</td>
+                    <td>{% if n.monlist_enabled %}<span class="risk-tag">ENABLED</span>{% else %}<span class="safe-tag">Disabled</span>{% endif %}</td>
+                    <td>{{ n.stratum or '' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            {% if data.smtp_enum %}
+            <h4 style="font-size: 13px; margin: 10px 0 5px; color: #4a5568;">SMTP Enumeration</h4>
+            <table>
+                <tr><th>Server</th><th>Username</th><th>Found</th><th>Method</th></tr>
+                {% for s in data.smtp_enum %}
+                <tr>
+                    <td>{{ s.server }}</td>
+                    <td>{{ s.username }}</td>
+                    <td>{% if s.found %}<span class="partial">⚠ Found</span>{% else %}<span class="no">Not found</span>{% endif %}</td>
+                    <td>{{ s.method or '' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 23. BREACH INTELLIGENCE -->
+    <!-- ============================================================ -->
+    {% if data.breaches %}
+    <div class="section">
+        <div class="section-title">💀 Breached Identities <span class="count">{{ data.breaches|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Email</th><th>Breach Count</th><th>Latest Breach</th><th>Sensitive</th></tr>
+                {% for b in data.breaches %}
+                <tr>
+                    <td>{{ b.email }}</td>
+                    <td><span class="badge badge-high">{{ b.breach_count }}</span></td>
+                    <td>{{ b.most_recent_breach or '' }}</td>
+                    <td>{% if b.is_sensitive %}<span class="risk-tag">Sensitive</span>{% else %}<span class="safe-tag">No</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 24. EMAIL & CONTACTS -->
+    <!-- ============================================================ -->
+    {% if data.emails %}
+    <div class="section">
+        <div class="section-title">📧 Contact Intelligence <span class="count">{{ data.emails|length }}</span></div>
+        <div class="section-body">
+            <ul class="sub-list">
+            {% for e in data.emails %}
+                <li>{{ e.email }} <span style="color: #718096; font-size: 11px;">({{ e.source_url or '' }})</span></li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 25. SEARCH INTELLIGENCE -->
+    <!-- ============================================================ -->
+    {% if data.search_results %}
+    <div class="section">
+        <div class="section-title">🔎 Search Intelligence <span class="count">{{ data.search_results|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Risk</th><th>Source</th><th>Title / Snippet</th></tr>
+                {% for r in data.search_results %}
+                <tr>
+                    <td><span class="badge {% if r.risk_level == 'Critical' %}badge-critical{% elif r.risk_level == 'High' %}badge-high{% elif r.risk_level == 'Medium' %}badge-medium{% else %}badge-info{% endif %}">{{ r.risk_level }}</span></td>
+                    <td>{{ r.source }}</td>
+                    <td style="font-size: 12px;">{{ r.title or r.snippet[:80] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 26. SOCIAL MEDIA PROFILES -->
+    <!-- ============================================================ -->
+    {% if data.social_profiles %}
+    <div class="section">
+        <div class="section-title">👤 Social Media Profiles <span class="count">{{ data.social_profiles|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Platform</th><th>Username</th><th>URL</th><th>Status</th></tr>
+                {% for p in data.social_profiles %}
+                <tr>
+                    <td><strong>{{ p.platform }}</strong></td>
+                    <td>{{ p.username }}</td>
+                    <td style="font-size: 11px;">{% if p.profile_url %}<a href="{{ p.profile_url }}" style="color: #3182ce;">{{ p.profile_url[:50] }}..</a>{% endif %}</td>
+                    <td>{% if p.status == 'Found' %}<span class="safe-tag">Found</span>{% else %}<span class="badge badge-low">{{ p.status }}</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- 27. HISTORICAL DATA -->
+    <!-- ============================================================ -->
+    {% if data.historical_data %}
+    <div class="section">
+        <div class="section-title">📜 Historical Intelligence <span class="count">{{ data.historical_data|length }}</span></div>
+        <div class="section-body">
+            <table>
+                <tr><th>Source</th><th>Snapshots</th><th>First Seen</th><th>Last Seen</th><th>Status</th></tr>
+                {% for h in data.historical_data %}
+                <tr>
+                    <td>{{ h.source }}</td>
+                    <td>{{ h.snapshot_count or 0 }}</td>
+                    <td>{{ h.first_seen or '' }}</td>
+                    <td>{{ h.last_seen or '' }}</td>
+                    <td>{% if h.status == 'Success' or h.status == 'OK' %}<span class="safe-tag">OK</span>{% else %}<span class="badge badge-low">{{ h.status or '' }}</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- FOOTER -->
+    <!-- ============================================================ -->
+    <div class="footer">
+        <p>Generated by <strong>Argus OSINT Framework</strong> | {{ date }}</p>
+        <p>CONFIDENTIAL — Authorized Use Only</p>
+        <p style="margin-top: 5px; font-size: 9px;">This report contains intelligence gathered from publicly available sources.</p>
+    </div>
+</div>
+</body>
+</html>

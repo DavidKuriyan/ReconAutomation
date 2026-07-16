@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS ports (
     state TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ports_unique 
+    ON ports(target_id, port, protocol);
 
 -- 7. Web Recon (Technologies & Directories)
 CREATE TABLE IF NOT EXISTS technologies (
@@ -238,4 +240,325 @@ CREATE TABLE IF NOT EXISTS audit_log (
     consent_given BOOLEAN DEFAULT 0,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     notes TEXT
+);
+
+-- =============================================================================
+-- NEW TABLES FOR ENHANCED RECONNAISSANCE MODULES
+-- =============================================================================
+
+-- 19. HTTP Methods (Method Enumeration)
+CREATE TABLE IF NOT EXISTS http_methods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    url TEXT NOT NULL,
+    method TEXT NOT NULL,
+    status_code INTEGER,
+    allowed BOOLEAN DEFAULT 0,
+    response_body_preview TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 20. DNS Zone Transfer
+CREATE TABLE IF NOT EXISTS dns_zone_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    nameserver TEXT NOT NULL,
+    zone_transfer_allowed BOOLEAN DEFAULT 0,
+    record_count INTEGER DEFAULT 0,
+    records_snippet TEXT,
+    error TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 21. SSL/TLS Configuration
+CREATE TABLE IF NOT EXISTS ssl_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    host TEXT NOT NULL,
+    port INTEGER DEFAULT 443,
+    supports_ssl_v2 BOOLEAN DEFAULT 0,
+    supports_ssl_v3 BOOLEAN DEFAULT 0,
+    supports_tls_v1 BOOLEAN DEFAULT 0,
+    supports_tls_v11 BOOLEAN DEFAULT 0,
+    supports_tls_v12 BOOLEAN DEFAULT 0,
+    supports_tls_v13 BOOLEAN DEFAULT 0,
+    weak_ciphers TEXT,
+    strong_ciphers TEXT,
+    certificate_expiry_days INTEGER,
+    self_signed BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 22. Traceroute
+CREATE TABLE IF NOT EXISTS traceroute (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    target_host TEXT NOT NULL,
+    hop_count INTEGER DEFAULT 0,
+    hops_json TEXT,
+    avg_rtt_ms REAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 23. IP Reputation / Blacklist
+CREATE TABLE IF NOT EXISTS ip_reputation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    ip_address TEXT NOT NULL,
+    blacklisted BOOLEAN DEFAULT 0,
+    blacklist_sources TEXT,
+    abuse_reports INTEGER DEFAULT 0,
+    threat_score INTEGER DEFAULT 0,
+    last_reported TEXT,
+    isp TEXT,
+    usage_type TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 24. SMTP User Enumeration
+CREATE TABLE IF NOT EXISTS smtp_enum (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    server TEXT NOT NULL,
+    username TEXT NOT NULL,
+    found BOOLEAN DEFAULT 0,
+    method TEXT,
+    response TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 25. NTP Information
+CREATE TABLE IF NOT EXISTS ntp_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    server TEXT NOT NULL,
+    stratum INTEGER,
+    reachability INTEGER,
+    delay REAL,
+    offset_sec REAL,
+    peers_found INTEGER DEFAULT 0,
+    clients_found INTEGER DEFAULT 0,
+    monlist_enabled BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 26. SNMP Information
+CREATE TABLE IF NOT EXISTS snmp_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    host TEXT NOT NULL,
+    community_string TEXT DEFAULT 'public',
+    accessible BOOLEAN DEFAULT 0,
+    system_description TEXT,
+    system_contact TEXT,
+    system_location TEXT,
+    system_name TEXT,
+    uptime TEXT,
+    services TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 27. SMB Shares
+CREATE TABLE IF NOT EXISTS smb_shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    host TEXT NOT NULL,
+    share_name TEXT NOT NULL,
+    share_type TEXT,
+    comment TEXT,
+    accessible BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 28. LDAP Information
+CREATE TABLE IF NOT EXISTS ldap_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    server TEXT NOT NULL,
+    port INTEGER DEFAULT 389,
+    accessible BOOLEAN DEFAULT 0,
+    base_dn TEXT,
+    naming_contexts TEXT,
+    attribute_count INTEGER DEFAULT 0,
+    attributes TEXT,
+    ssl_supported BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 29. Historical WHOIS
+CREATE TABLE IF NOT EXISTS whois_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    domain TEXT NOT NULL,
+    snapshot_date TEXT,
+    registrar TEXT,
+    registrant_name TEXT,
+    registrant_email TEXT,
+    raw_data TEXT,
+    source TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 30. BGP Information
+CREATE TABLE IF NOT EXISTS bgp_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    ip_address TEXT NOT NULL,
+    asn INTEGER,
+    asn_name TEXT,
+    asn_country TEXT,
+    asn_routes TEXT,
+    upstream_asns TEXT,
+    peer_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 31. Malware Analysis Reports
+CREATE TABLE IF NOT EXISTS malware_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    indicator TEXT NOT NULL,
+    indicator_type TEXT,
+    source TEXT,
+    report_url TEXT,
+    threat_score INTEGER DEFAULT 0,
+    malware_family TEXT,
+    first_seen TEXT,
+    last_seen TEXT,
+    tags TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 32. Web Forms
+CREATE TABLE IF NOT EXISTS web_forms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    page_url TEXT NOT NULL,
+    form_action TEXT,
+    form_method TEXT DEFAULT 'GET',
+    input_fields TEXT,
+    has_password_field BOOLEAN DEFAULT 0,
+    has_email_field BOOLEAN DEFAULT 0,
+    has_file_upload BOOLEAN DEFAULT 0,
+    form_type TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 33. Auth Pages
+CREATE TABLE IF NOT EXISTS auth_pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    page_url TEXT NOT NULL,
+    auth_type TEXT,
+    status_code INTEGER,
+    has_login_form BOOLEAN DEFAULT 0,
+    has_password_reset BOOLEAN DEFAULT 0,
+    has_registration BOOLEAN DEFAULT 0,
+    has_mfa_field BOOLEAN DEFAULT 0,
+    detected_keywords TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 34. Job Postings
+CREATE TABLE IF NOT EXISTS job_postings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    source TEXT,
+    job_title TEXT,
+    company TEXT,
+    technologies TEXT,
+    posting_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 35. Security Reports / Disclosures
+CREATE TABLE IF NOT EXISTS security_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    source TEXT,
+    title TEXT,
+    report_url TEXT,
+    severity TEXT,
+    cve_id TEXT,
+    published_date TEXT,
+    summary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 36. Cached Pages / Search Engine Cache
+CREATE TABLE IF NOT EXISTS cached_pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    page_url TEXT,
+    cache_source TEXT,
+    cache_date TEXT,
+    content_snippet TEXT,
+    found_keywords TEXT,
+    is_available BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 37. Business Directory Info
+CREATE TABLE IF NOT EXISTS business_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    source TEXT,
+    company_name TEXT,
+    description TEXT,
+    industry TEXT,
+    founded_year TEXT,
+    employees TEXT,
+    headquarters TEXT,
+    revenue TEXT,
+    social_links TEXT,
+    raw_data TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 38. Cookie Security Audit
+CREATE TABLE IF NOT EXISTS cookie_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    cookie_name TEXT NOT NULL,
+    domain TEXT,
+    path TEXT,
+    secure_flag BOOLEAN DEFAULT 0,
+    httponly BOOLEAN DEFAULT 0,
+    samesite TEXT,
+    expiry TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 39. DNSBL / Blacklist Check Results
+CREATE TABLE IF NOT EXISTS dnsbl_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    blacklist_source TEXT NOT NULL,
+    listed BOOLEAN DEFAULT 0,
+    response TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 40. Response Code Map
+CREATE TABLE IF NOT EXISTS response_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    url TEXT NOT NULL,
+    status_code INTEGER,
+    content_length INTEGER,
+    content_type TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 41. RIR WHOIS Records
+CREATE TABLE IF NOT EXISTS rir_whois (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id INTEGER REFERENCES targets(id),
+    rir_name TEXT,
+    whois_server TEXT,
+    net_handle TEXT,
+    net_range TEXT,
+    organization TEXT,
+    raw_data TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

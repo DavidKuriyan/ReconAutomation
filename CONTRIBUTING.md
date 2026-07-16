@@ -1,6 +1,6 @@
-# Contributing to Aether-Recon
+# Contributing to Argus OSINT Framework
 
-Thank you for your interest in contributing to the Aether-Recon OSINT Framework! We welcome contributions from the community to help make this tool better, safer, and more powerful.
+Thank you for your interest in contributing to the Argus OSINT Framework! We welcome contributions from the community to help make this tool better, safer, and more powerful.
 
 ## 🤝 How to Contribute
 

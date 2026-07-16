@@ -1,14 +1,6 @@
  datacenter.html
- datacenter.html-backup
- datacenter.html-dev
- datacenter.html-old
- datacenter.html-test
 .get("highlight")
 .get("now")
-.get("now")-backup
-.get("now")-dev
-.get("now")-old
-.get("now")-test
 .get("view")
 .get("view")-backup
 .get("view")-dev
@@ -16,25 +8,25 @@
 .get("view")-test
 2000
 5c5dd728
-5c5dd728-backup
-5c5dd728-dev
-5c5dd728-old
-5c5dd728-test
 AI.html
-AI.html-backup
-AI.html-dev
-AI.html-old
-AI.html-test
 AIML.html
+AIML.html-backup
+AIML.html-dev
+AIML.html-old
+AIML.html-test
 Anna_University_Logo.svg.png
+Anna_University_Logo.svg.png-backup
+Anna_University_Logo.svg.png-dev
+Anna_University_Logo.svg.png-old
+Anna_University_Logo.svg.png-test
 BAEKAAEALAAA
 COE
 CSBS.html
+CSBS.html-backup
+CSBS.html-dev
+CSBS.html-old
+CSBS.html-test
 CSE.html
-CSE.html-backup
-CSE.html-dev
-CSE.html-old
-CSE.html-test
 CYBER.html
 CYBER.html-backup
 CYBER.html-dev
@@ -46,28 +38,32 @@ Dote.html-dev
 Dote.html-old
 Dote.html-test
 ECE.html
+ECE.html-backup
+ECE.html-dev
+ECE.html-old
+ECE.html-test
 EEE.html
 Events
+Events-backup
+Events-dev
+Events-old
+Events-test
 Foi.html
 Grievance-Redressal-Cell.html
+Grievance-Redressal-Cell.html-backup
+Grievance-Redressal-Cell.html-dev
+Grievance-Redressal-Cell.html-old
+Grievance-Redressal-Cell.html-test
 Help Desk Display Board.pdf
 IIIC.html
-IIIC.html-backup
-IIIC.html-dev
-IIIC.html-old
-IIIC.html-test
 IPRCell.html
+IPRCell.html-backup
+IPRCell.html-dev
+IPRCell.html-old
+IPRCell.html-test
 IT.html
 Income&Expenditure.pdf
-Income&Expenditure.pdf-backup
-Income&Expenditure.pdf-dev
-Income&Expenditure.pdf-old
-Income&Expenditure.pdf-test
 Library.html
-Library.html-backup
-Library.html-dev
-Library.html-old
-Library.html-test
 MECH.html
 MECH.html.html
 MECH.html.html-backup
@@ -78,16 +74,12 @@ NBA.html
 Naac.html
 National Conference - Chemistry.pdf
 National Conference - front.jpg
-National Conference - front.jpg-backup
-National Conference - front.jpg-dev
-National Conference - front.jpg-old
-National Conference - front.jpg-test
 PED.html
-PED.html-backup
-PED.html-dev
-PED.html-old
-PED.html-test
 SETE Nov'25 - PG.pdf
+SETE Nov'25 - PG.pdf-backup
+SETE Nov'25 - PG.pdf-dev
+SETE Nov'25 - PG.pdf-old
+SETE Nov'25 - PG.pdf-test
 SETE Nov'25 ODD - UG (R 2025).pdf
 SETE Nov'25 ODD - UG (R 2025).pdf-backup
 SETE Nov'25 ODD - UG (R 2025).pdf-dev
@@ -96,17 +88,13 @@ SETE Nov'25 ODD - UG (R 2025).pdf-test
 SETE Nov25 ODD- UG.pdf
 SSMIET-Outreach.html
 UNDERTAKING FORM FOR INTERNSHIP.pdf
+UNDERTAKING FORM FOR INTERNSHIP.pdf-backup
+UNDERTAKING FORM FOR INTERNSHIP.pdf-dev
+UNDERTAKING FORM FOR INTERNSHIP.pdf-old
+UNDERTAKING FORM FOR INTERNSHIP.pdf-test
 admin.html
 agccell.html
-agccell.html-backup
-agccell.html-dev
-agccell.html-old
-agccell.html-test
 ai1.jpg
-ai1.jpg-backup
-ai1.jpg-dev
-ai1.jpg-old
-ai1.jpg-test
 aicte.png
 aicte.png-backup
 aicte.png-dev
@@ -116,84 +104,112 @@ aicte_.html
 aishe.html
 aishe.png
 alumni association.html
-alumni association.html-backup
-alumni association.html-dev
-alumni association.html-old
-alumni association.html-test
 annaapproval.html
+annaapproval.html-backup
+annaapproval.html-dev
+annaapproval.html-old
+annaapproval.html-test
 bootstrap.css
 bootstrap.min.js
+bootstrap.min.js-backup
+bootstrap.min.js-dev
+bootstrap.min.js-old
+bootstrap.min.js-test
 build club.html
 cc.html
-cc.html-backup
-cc.html-dev
-cc.html-old
-cc.html-test
 cdn-cgi
 cgpa calc
 chemistry.html
 civil.html
+civil.html-backup
+civil.html-dev
+civil.html-old
+civil.html-test
 cloudflare-static
+cloudflare-static-backup
+cloudflare-static-dev
+cloudflare-static-old
+cloudflare-static-test
 communication system.html
-communication system.html-backup
-communication system.html-dev
-communication system.html-old
-communication system.html-test
 contact-us.html
 course
 course-details.html
 css
+css-backup
+css-dev
+css-old
+css-test
 custom.js
-custom.js-backup
-custom.js-dev
-custom.js-old
-custom.js-test
 datacenter.html
-datacenter.html-backup
-datacenter.html-dev
-datacenter.html-old
-datacenter.html-test
 dote.png
 edc1.html
 email-decode.min.js
 eng.html
+eng.html-backup
+eng.html-dev
+eng.html-old
+eng.html-test
 erpnew.html
 fav.ico
 feedback.html
+feedback.html-backup
+feedback.html-dev
+feedback.html-old
+feedback.html-test
 font-awesome.min.css
+font-awesome.min.css-backup
+font-awesome.min.css-dev
+font-awesome.min.css-old
+font-awesome.min.css-test
 gallery-photo.html
+gallery-photo.html-backup
+gallery-photo.html-dev
+gallery-photo.html-old
+gallery-photo.html-test
 h-ic4.png
 higherstudies.html
+higherstudies.html-backup
+higherstudies.html-dev
+higherstudies.html-old
+higherstudies.html-test
 humane league.html
 icon
 iete.html
-iete.html-backup
-iete.html-dev
-iete.html-old
-iete.html-test
 image-768x768.png
 images
+images-backup
+images-dev
+images-old
+images-test
 index-2.html
 index.html
 innovators club.html
 institution innovation council.html
 intership
+intership-backup
+intership-dev
+intership-old
+intership-test
 iqac.html
 iqac.png
+iqac.png-backup
+iqac.png-dev
+iqac.png-old
+iqac.png-test
 lGODlhAQABAIABAP
-lGODlhAQABAIABAP-backup
-lGODlhAQABAIABAP-dev
-lGODlhAQABAIABAP-old
-lGODlhAQABAIABAP-test
 lifeatssm.html
 logo.png
 main.min.js
+main.min.js-backup
+main.min.js-dev
+main.min.js-old
+main.min.js-test
 mandatorydiscloser.html
-mandatorydiscloser.html-backup
-mandatorydiscloser.html-dev
-mandatorydiscloser.html-old
-mandatorydiscloser.html-test
 mat.html
+mat.html-backup
+mat.html-dev
+mat.html-old
+mat.html-test
 materialize.css
 materialize.min.js
 materialize.min.js-backup
@@ -202,12 +218,12 @@ materialize.min.js-old
 materialize.min.js-test
 math.html
 mission.jpg
-mission.jpg-backup
-mission.jpg-dev
-mission.jpg-old
-mission.jpg-test
 naac.png
 national service scheme.html
+national service scheme.html-backup
+national service scheme.html-dev
+national service scheme.html-old
+national service scheme.html-test
 nba.png
 nba.png-backup
 nba.png-dev
@@ -216,101 +232,97 @@ nba.png-test
 ndli club.html
 new course.jpg
 nirf.html
+nirf.html-backup
+nirf.html-dev
+nirf.html-old
+nirf.html-test
 nirf.png
-nirf.png-backup
-nirf.png-dev
-nirf.png-old
-nirf.png-test
 online payment.html
+online payment.html-backup
+online payment.html-dev
+online payment.html-old
+online payment.html-test
 pdf
-pdf-backup
-pdf-dev
-pdf-old
-pdf-test
 phone.png
 physics.html
-physics.html-backup
-physics.html-dev
-physics.html-old
-physics.html-test
 placements.html
+placements.html-backup
+placements.html-dev
+placements.html-old
+placements.html-test
 policies.pdf
 policies.pdf-backup
 policies.pdf-dev
 policies.pdf-old
 policies.pdf-test
 research cell.html
-research cell.html-backup
-research cell.html-dev
-research cell.html-old
-research cell.html-test
 research.html
 research.png
+research.png-backup
+research.png-dev
+research.png-old
+research.png-test
 rotaract.html
 scienceandhumanities.html
+scienceandhumanities.html-backup
+scienceandhumanities.html-dev
+scienceandhumanities.html-old
+scienceandhumanities.html-test
 scripts
-scripts-backup
-scripts-dev
-scripts-old
-scripts-test
 scst.html
-scst.html-backup
-scst.html-dev
-scst.html-old
-scst.html-test
 sip.html
+sip.html-backup
+sip.html-dev
+sip.html-old
+sip.html-test
 slide1.jpg
 slider
 sm-1.jpg
-sm-1.jpg-backup
-sm-1.jpg-dev
-sm-1.jpg-old
-sm-1.jpg-test
 sm-2.jpg
 sm-3.jpg
+sm-3.jpg-backup
+sm-3.jpg-dev
+sm-3.jpg-old
+sm-3.jpg-test
 sm-4.jpg
-sm-4.jpg-backup
-sm-4.jpg-dev
-sm-4.jpg-old
-sm-4.jpg-test
 sm-5.jpg
-sm-5.jpg-backup
-sm-5.jpg-dev
-sm-5.jpg-old
-sm-5.jpg-test
 sm-6.jpg
 sm-6.jpg-backup
 sm-6.jpg-dev
 sm-6.jpg-old
 sm-6.jpg-test
 sm-7.jpg
-sm-7.jpg-backup
-sm-7.jpg-dev
-sm-7.jpg-old
-sm-7.jpg-test
 sm-8.jpg
 sm-9.jpg
+sm-9.jpg-backup
+sm-9.jpg-dev
+sm-9.jpg-old
+sm-9.jpg-test
 space club.html
-space club.html-backup
-space club.html-dev
-space club.html-old
-space club.html-test
 ssmhilt.html
 ssmlogo.png
 staffscount.html
+staffscount.html-backup
+staffscount.html-dev
+staffscount.html-old
+staffscount.html-test
 startup club.html
+startup club.html-backup
+startup club.html-dev
+startup club.html-old
+startup club.html-test
 studentscount.html
+studentscount.html-backup
+studentscount.html-dev
+studentscount.html-old
+studentscount.html-test
 style-mob.css
-style-mob.css-backup
-style-mob.css-dev
-style-mob.css-old
-style-mob.css-test
 style.css
-style.css-backup
-style.css-dev
-style.css-old
-style.css-test
 svg
+svg-backup
+svg-dev
+svg-old
+svg-test
 tamil.html
 tamizh mandram.html
 tamizh mandram.html-backup
@@ -320,27 +332,15 @@ tamizh mandram.html-test
 thermal.html
 ubafinal.html
 ugc.html
-ugc.html-backup
-ugc.html-dev
-ugc.html-old
-ugc.html-test
 ugc.png
-ugc.png-backup
-ugc.png-dev
-ugc.png-old
-ugc.png-test
 vision.jpg
-vision.jpg-backup
-vision.jpg-dev
-vision.jpg-old
-vision.jpg-test
 wAAACH
 women empowerment cell.html
-women empowerment cell.html-backup
-women empowerment cell.html-dev
-women empowerment cell.html-old
-women empowerment cell.html-test
 yoga.html
+yoga.html-backup
+yoga.html-dev
+yoga.html-old
+yoga.html-test
 youth red cross.html
 youth red cross.html-backup
 youth red cross.html-dev

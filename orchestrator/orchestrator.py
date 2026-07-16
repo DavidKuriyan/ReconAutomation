@@ -1,5 +1,5 @@
 """
-Orchestrator Module for Aether-Recon OSINT Framework
+Orchestrator Module for Argus OSINT Framework
 Coordinates the execution of all reconnaissance modules, handles database connections,
 and manages the overall scan workflow with defensive coding practices.
 """
@@ -32,7 +32,7 @@ from modules.active_recon import ActiveRecon
 from modules.web_analysis import WebAnalysis
 
 # Configuration
-DB_PATH = "../reporter/argus.db"
+DB_PATH = config.DB_PATH
 
 # Initialize Colorama
 try:
@@ -276,7 +276,7 @@ class ReconEngine:
         Main execution flow.
         """
         print("\n" + "="*70)
-        print(f"{Colors.BANNER}🛰️  AETHER-RECON v2.0 - Enhanced OSINT Framework{Colors.BANNER}")
+        print(f"{Colors.BANNER}🛰️  ARGUS OSINT v2.0 - Intelligence Framework{Colors.BANNER}")
         print("="*70)
         
         # 1. Consent
@@ -297,6 +297,7 @@ class ReconEngine:
             print("="*50)
             
             self.execution_wrapper(self.passive.run_whois, "WHOIS")
+            self.execution_wrapper(self.passive.run_rir_whois, "RIR WHOIS")
             self.execution_wrapper(self.passive.run_dns_enum, "DNS Enumeration")
             
             # Module: Geolocation
@@ -320,12 +321,11 @@ class ReconEngine:
                  hist = HistoricalIntelligence(self.target, self.target_id)
                  self.execution_wrapper(hist.execute, "Historical Intel")
 
-            self.execution_wrapper(self.passive.run_email_harvest, "Email Havesting")
+            self.execution_wrapper(self.passive.run_email_harvest, "Email Harvesting")
             self.execution_wrapper(self.passive.run_smtp_analysis, "SMTP Analysis")
 
             # Module: Threat Intel
             if config.ENABLE_THREAT_INTEL:
-                # Ensure IP is present for specific threat intel modules (Shodan)
                 if not self.target_ip:
                     self.resolve_target_ip()
                     
@@ -334,9 +334,17 @@ class ReconEngine:
 
             # Module: Breach Intel
             if config.ENABLE_BREACH_INTEL:
-                # Combine harvested emails with any others found
                 breach = BreachIntelligence(self.target, self.target_id, list(self.passive.discovered_emails))
                 self.execution_wrapper(breach.execute, "Breach Intelligence")
+
+            # NEW: Enhanced Passive Techniques
+            if self.target_ip:
+                self.execution_wrapper(self.passive.run_dnsbl_check, "DNSBL Check")
+                self.execution_wrapper(self.passive.run_bgp_analysis, "BGP Analysis")
+                self.execution_wrapper(self.passive.run_search_engine_ip, "Search Engine IP")
+                self.execution_wrapper(self.passive.run_abuseipdb_check, "AbuseIPDB Check")
+            self.execution_wrapper(self.passive.run_historical_whois, "Historical WHOIS")
+            self.execution_wrapper(self.passive.run_reverse_whois, "Reverse WHOIS")
 
         # 5. Phase 2: Active Recon
         if self.should_run('active'):
@@ -346,8 +354,18 @@ class ReconEngine:
             self.execution_wrapper(self.active.run_ping, "Ping Check")
             self.execution_wrapper(self.active.run_nmap, "Port Scan")
             self.execution_wrapper(self.active.run_tech_detect, "Tech Detection")
+            self.execution_wrapper(self.active.run_techchecker_api, "Tech Checker API")
             self.execution_wrapper(self.active.run_dirb_lite, "Directory Busting")
             self.execution_wrapper(self.active.run_extended_web_recon, "Extended Web Recon")
+
+            # NEW: Advanced Active Recon Techniques
+            self.execution_wrapper(self.active.run_dns_zone_transfer, "DNS Zone Transfer")
+            self.execution_wrapper(self.active.run_snmp_enum, "SNMP Enumeration")
+            self.execution_wrapper(self.active.run_smb_enum, "SMB Enumeration")
+            self.execution_wrapper(self.active.run_ldap_enum, "LDAP Enumeration")
+            self.execution_wrapper(self.active.run_ntp_enum, "NTP Enumeration")
+            self.execution_wrapper(self.active.run_smtp_enum, "SMTP Enumeration")
+            self.execution_wrapper(self.active.run_os_fingerprint, "OS Fingerprinting")
 
             # Module: Metadata
             if config.ENABLE_METADATA:
@@ -378,7 +396,7 @@ class ReconEngine:
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Aether-Recon OSINT Framework')
+    parser = argparse.ArgumentParser(description='Argus OSINT Framework')
     parser.add_argument('target', nargs='?', help='Target domain (e.g., example.com)')
     parser.add_argument('--consent-given', action='store_true', help='Skip consent prompt (Use only if authorized)')
     parser.add_argument('--mode', choices=['full', 'active', 'passive'], default='full', help='Scan mode')

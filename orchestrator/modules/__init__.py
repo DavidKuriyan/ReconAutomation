@@ -1,5 +1,5 @@
 """
-Enhanced OSINT Modules for Aether-Recon Framework
+Enhanced OSINT Modules for Argus OSINT Framework
 """
 
 from .geo_intelligence import GeoIntelligence
@@ -12,6 +12,8 @@ from .search_intel import SearchIntelligence
 from .reporting import ReportGenerator
 from .web_analysis import WebAnalysis
 from .passive_sources import PassiveSources
+from .passive_recon import PassiveRecon
+from .active_recon import ActiveRecon
 
 __all__ = [
     'GeoIntelligence',
@@ -23,5 +25,7 @@ __all__ = [
     'SearchIntelligence',
     'ReportGenerator',
     'WebAnalysis',
-    'PassiveSources'
+    'PassiveSources',
+    'PassiveRecon',
+    'ActiveRecon',
 ]

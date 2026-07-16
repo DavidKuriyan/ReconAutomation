@@ -1,15 +1,15 @@
-"""
-Web Analysis Module for Aether-Recon OSINT Framework
+"""Web Analysis Module for Argus OSINT Framework
 Comprehensive web server analysis including probing, screenshots, CMS detection,
-URL extraction, JavaScript analysis, API discovery, and security scanning.
-"""
+URL extraction, JavaScript analysis, API discovery, and security scanning."""
 
 import os
 import re
 import json
 import socket
+import ssl
 import hashlib
-import subprocess
+import base64
+
 import concurrent.futures
 from urllib.parse import urlparse, urljoin, parse_qs
 from typing import List, Dict, Set, Optional, Any, Tuple
@@ -28,118 +28,40 @@ try:
 except ImportError:
     sqlite3 = None
 
-# Import config
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import config, Colors
+from utils import get_random_headers, check_tool as check_tool_available, run_command
 
-# User agents for rotation
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-]
+# Web ports loaded from config (config-driven)
+COMMON_WEB_PORTS = [int(p) for p in config.COMMON_WEB_PORTS.split(',') if p.strip()]
 
-# Common web ports to probe (reduced for speed)
-COMMON_WEB_PORTS = [80, 443, 8080, 8443, 8000, 3000]
+# Virtual host prefixes from config
+VHOST_PREFIXES = [p.strip() for p in config.VHOST_PREFIXES.split(',') if p.strip()]
 
-# Common virtual host prefixes (top 15 most common)
-VHOST_PREFIXES = [
-    'www', 'dev', 'staging', 'test', 'api', 'admin', 'app',
-    'portal', 'mail', 'blog', 'cdn', 'static', 'assets', 'dashboard', 'panel'
-]
-
-# CMS signatures for detection
+# CMS signatures for detection (business logic, stays here)
 CMS_SIGNATURES = {
-    'WordPress': [
-        ('/wp-login.php', 200),
-        ('/wp-admin/', [200, 302]),
-        ('/wp-content/', 200),
-        ('/wp-includes/', 200),
-    ],
-    'Drupal': [
-        ('/core/misc/drupal.js', 200),
-        ('/sites/default/', [200, 403]),
-        ('/modules/', 200),
-    ],
-    'Joomla': [
-        ('/administrator/', [200, 302]),
-        ('/components/', 200),
-        ('/media/system/', 200),
-    ],
-    'Magento': [
-        ('/skin/frontend/', 200),
-        ('/js/mage/', 200),
-        ('/app/etc/local.xml', [200, 403]),
-    ],
-    'Shopify': [
-        ('/cdn.shopify.com', 200),
-    ],
-    'Ghost': [
-        ('/ghost/', [200, 302]),
-    ],
-    'Laravel': [
-        ('/_debugbar/', [200, 404]),
-    ],
+    'WordPress': [('/wp-login.php', 200), ('/wp-admin/', [200, 302]), ('/wp-content/', 200), ('/wp-includes/', 200)],
+    'Drupal': [('/core/misc/drupal.js', 200), ('/sites/default/', [200, 403]), ('/modules/', 200)],
+    'Joomla': [('/administrator/', [200, 302]), ('/components/', 200), ('/media/system/', 200)],
+    'Magento': [('/skin/frontend/', 200), ('/js/mage/', 200), ('/app/etc/local.xml', [200, 403])],
+    'Shopify': [('/cdn.shopify.com', 200)],
+    'Ghost': [('/ghost/', [200, 302])],
+    'Laravel': [('/_debugbar/', [200, 404])],
 }
 
-# GraphQL endpoints to probe (reduced)
-GRAPHQL_ENDPOINTS = ['/graphql', '/api/graphql', '/v1/graphql', '/gql']
+# GraphQL endpoints from config
+GRAPHQL_ENDPOINTS = [e.strip() for e in config.GRAPHQL_ENDPOINTS.split(',') if e.strip()]
 
-# Common gRPC ports (reduced)
-GRPC_PORTS = [50051, 9090]
+# Common gRPC ports from config
+GRPC_PORTS = [int(p) for p in config.GRPC_PORTS.split(',') if p.strip()]
 
 # IIS shortname characters
 IIS_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789_-'
 
 
-def get_random_headers(host: str) -> Dict[str, str]:
-    """Generate randomized HTTP headers for evasion."""
-    import random
-    return {
-        'User-Agent': random.choice(USER_AGENTS),
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Host': host,
-        'Connection': 'keep-alive',
-    }
-
-
-def run_command(cmd: List[str], timeout: int = 60) -> Tuple[bool, str, str]:
-    """Run external command with timeout."""
-    try:
-        result = subprocess.run(
-            cmd, 
-            capture_output=True, 
-            text=True, 
-            timeout=timeout,
-            shell=True if os.name == 'nt' else False
-        )
-        return True, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return False, "", "Command timed out"
-    except FileNotFoundError:
-        return False, "", f"Command not found: {cmd[0]}"
-    except Exception as e:
-        return False, "", str(e)
-
-
-def check_tool_available(tool: str) -> bool:
-    """Check if an external tool is available in PATH."""
-    try:
-        if os.name == 'nt':
-            result = subprocess.run(['where', tool], capture_output=True, text=True)
-        else:
-            result = subprocess.run(['which', tool], capture_output=True, text=True)
-        return result.returncode == 0
-    except:
-        return False
-
-
 class WebAnalysis:
     """
-    Comprehensive Web Analysis Module for Aether-Recon.
+    Comprehensive Web Analysis Module for Argus OSINT Framework.
     
     Features:
     - Web Probing: Detect live web servers on standard and uncommon ports
@@ -160,6 +82,12 @@ class WebAnalysis:
     - Wordlist Generation: Create custom wordlists for fuzzing
     - Password Dictionary: Generate password dictionaries
     - IIS Shortname Scanning: Detect IIS shortname vulnerabilities
+    - HTTP Method Enumeration: Determine supported HTTP methods (PUT, DELETE, TRACE, etc.)
+    - Form Enumeration: Discover login, registration, search, and upload forms
+    - Authentication Page Identification: Locate auth interfaces (login, password reset, MFA)
+    - SSL/TLS Configuration Testing: Test TLS protocol versions and certificate expiry
+    - Cookie Security Audit: Review Secure, HttpOnly, and SameSite attributes
+    - Response Code Mapping: Map HTTP status codes across common paths
     """
     
     def __init__(self, target: str, target_id: int, db_manager):
@@ -167,10 +95,10 @@ class WebAnalysis:
         self.target_id = target_id
         self.db = db_manager
         self.base_url = f"https://{target}"
-        # OPTIMIZED: Reduced timeout for faster scanning
-        self.http_timeout = 3  # Fast timeout
-        self.max_workers = 25  # More parallel workers
-        self.fast_mode = True  # Skip rate limiting
+        # Timeout and workers loaded from config
+        self.http_timeout = config.HTTP_TIMEOUT_FAST
+        self.max_workers = config.MAX_WORKERS_GENERAL
+        self.fast_mode = True
         
         # Collected data
         self.live_servers: List[Dict] = []
@@ -194,13 +122,18 @@ class WebAnalysis:
         os.makedirs(self.screenshot_dir, exist_ok=True)
         
     def _save_finding(self, category: str, finding: str, severity: str = 'Info', details: str = ''):
-        """Save a finding to the database."""
+        """Save a finding to the database, avoiding duplicates."""
         if self.db.connect():
             try:
                 cursor = self.db.conn.cursor()
-                # Use title/description columns to match existing schema
-                # Prefix title with category for identification
                 title = f"[{category}] {finding}"
+                # Check if this finding already exists for this target
+                cursor.execute(
+                    "SELECT id FROM findings WHERE target_id=? AND title=?",
+                    (self.target_id, title)
+                )
+                if cursor.fetchone():
+                    return  # Skip duplicate
                 cursor.execute("""
                     INSERT INTO findings (target_id, title, severity, description, url)
                     VALUES (?, ?, ?, ?, ?)
@@ -212,8 +145,10 @@ class WebAnalysis:
                 self.db.close()
     
     def _rate_limit_wait(self):
-        """Rate limiting disabled for speed."""
-        pass  # Disabled for performance
+        """Wait according to configured rate limit to avoid overwhelming target servers."""
+        rate = config.RATE_LIMIT_WEB_ANALYSIS
+        if rate > 0:
+            time.sleep(rate)
 
     # =========================================================================
     # 1. WEB PROBING
@@ -288,7 +223,7 @@ class WebAnalysis:
                         'title': title,
                         'webserver': resp.headers.get('Server', ''),
                     }
-                except:
+                except requests.RequestException:
                     pass
             return None
         
@@ -356,7 +291,7 @@ class WebAnalysis:
             )
             baseline_len = len(baseline.content)
             baseline_status = baseline.status_code
-        except:
+        except requests.RequestException:
             print(f"{Colors.WARNING}        [!] Could not establish baseline response{Colors.RESET}")
             return
         
@@ -380,7 +315,7 @@ class WebAnalysis:
                 # Different response indicates valid vhost
                 if resp.status_code != baseline_status or abs(len(resp.content) - baseline_len) > 100:
                     return vhost
-            except:
+            except requests.RequestException:
                 pass
             return None
         
@@ -440,7 +375,7 @@ class WebAnalysis:
                         elif resp.status_code == expected_status:
                             detected = True
                             break
-                    except:
+                    except requests.RequestException:
                         pass
                 
                 if detected:
@@ -524,7 +459,7 @@ class WebAnalysis:
                             self.discovered_urls.add(full_url)
                             if full_url not in visited and full_url.startswith('http'):
                                 to_visit.append(full_url)
-            except:
+            except (requests.RequestException, socket.timeout):
                 pass
 
     # =========================================================================
@@ -595,7 +530,6 @@ class WebAnalysis:
                 )
                 if resp.status_code == 200 and len(resp.content) > 0:
                     # Calculate favicon hash (MurmurHash3)
-                    import base64
                     favicon_b64 = base64.b64encode(resp.content).decode()
                     # Simple hash for searching
                     favicon_hash = hashlib.md5(resp.content).hexdigest()
@@ -607,9 +541,9 @@ class WebAnalysis:
                     self._save_finding('Web Analysis', f'Favicon Hash: {favicon_hash}', 'Info',
                                      f'Search Shodan: http.favicon.hash:{favicon_hash}')
                     return
-            except:
+            except requests.RequestException:
                 pass
-        
+
         print(f"{Colors.WARNING}        [!] No favicon found{Colors.RESET}")
 
     # =========================================================================
@@ -673,10 +607,9 @@ class WebAnalysis:
                     matches = re.findall(pattern, content)
                     for match in matches:
                         self.discovered_urls.add(match.strip('"\''))
-                        
-            except:
+            except (requests.RequestException, json.JSONDecodeError):
                 pass
-        
+
         if self.js_secrets:
             print(f"{Colors.SUCCESS}        ✓ Found {len(self.js_secrets)} potential secret(s){Colors.RESET}")
             for secret in self.js_secrets[:5]:
@@ -709,7 +642,7 @@ class WebAnalysis:
                 )
                 if resp.status_code == 200 and 'version' in resp.text[:100]:
                     sourcemaps_found.append(sourcemap_url)
-            except:
+            except requests.RequestException:
                 pass
         
         if sourcemaps_found:
@@ -763,7 +696,7 @@ class WebAnalysis:
                 if resp.status_code == 200 and '__schema' in resp.text:
                     self.graphql_endpoints.append(url)
                     
-            except:
+            except (requests.RequestException, json.JSONDecodeError):
                 pass
         
         if self.graphql_endpoints:
@@ -795,7 +728,7 @@ class WebAnalysis:
                     for url, params in data.items():
                         for param in params:
                             self.discovered_params.add(param)
-                except:
+                except (json.JSONDecodeError, ValueError):
                     pass
         
         # Python fallback - common parameter wordlist
@@ -817,7 +750,7 @@ class WebAnalysis:
                     )
                     if resp.status_code == 200 and 'test123' in resp.text:
                         return param
-                except:
+                except requests.RequestException:
                     pass
                 return None
             
@@ -871,10 +804,10 @@ class WebAnalysis:
                     return {'url': ws_url, 'origin_bypass': True, 'status': 'Cross-origin allowed'}
                 elif resp.status_code in [200, 400]:
                     return {'url': ws_url, 'origin_bypass': False, 'status': 'Endpoint detected'}
-            except:
+            except (requests.RequestException, socket.timeout):
                 pass
             return None
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(check_ws, ws) for ws in ws_endpoints]
             for future in concurrent.futures.as_completed(futures, timeout=10):
@@ -929,7 +862,7 @@ class WebAnalysis:
                             'address': f"{self.target}:{port}",
                             'services': ['Port open - grpcurl required for service enumeration']
                         })
-                except:
+                except (socket.timeout, OSError):
                     pass
         
         if self.grpc_services:
@@ -983,7 +916,7 @@ class WebAnalysis:
                             'status': result.get('status', 0),
                             'length': result.get('length', 0)
                         })
-                except:
+                except (json.JSONDecodeError, ValueError):
                     pass
             
             os.unlink(wordlist_path)
@@ -1002,16 +935,16 @@ class WebAnalysis:
                     )
                     if resp.status_code in [200, 301, 302, 307, 401, 403]:
                         return {'path': dir_name, 'status': resp.status_code, 'length': len(resp.content)}
-                except:
+                except requests.RequestException:
                     pass
                 return None
-            
-            with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
-                futures = [executor.submit(check_dir, d) for d in common_dirs]
-                for future in concurrent.futures.as_completed(futures, timeout=30):
-                    result = future.result()
-                    if result:
-                        found_dirs.append(result)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+            futures = [executor.submit(check_dir, d) for d in common_dirs]
+            for future in concurrent.futures.as_completed(futures, timeout=30):
+                result = future.result()
+                if result:
+                    found_dirs.append(result)
         
         if found_dirs:
             print(f"{Colors.SUCCESS}        ✓ Found {len(found_dirs)} accessible path(s){Colors.RESET}")
@@ -1097,7 +1030,7 @@ class WebAnalysis:
                 with open(wordlist_path, 'w') as f:
                     f.write('\n'.join(sorted(self.wordlist)))
                 print(f"          - Saved to: {wordlist_path}")
-            except:
+            except (OSError, IOError):
                 pass
         else:
             print(f"{Colors.WARNING}        [!] No words to generate{Colors.RESET}")
@@ -1152,7 +1085,7 @@ class WebAnalysis:
                 with open(dict_path, 'w') as f:
                     f.write('\n'.join(sorted(passwords)))
                 print(f"          - Saved to: {dict_path}")
-            except:
+            except (OSError, IOError):
                 pass
 
     # =========================================================================
@@ -1178,7 +1111,7 @@ class WebAnalysis:
             )
             server = resp.headers.get('Server', '').lower()
             is_iis = 'iis' in server or 'microsoft' in server
-        except:
+        except requests.RequestException:
             pass
         
         if not is_iis:
@@ -1209,7 +1142,7 @@ class WebAnalysis:
                     pass
                 elif resp.status_code != 400:
                     self.iis_shortnames.append("Potentially vulnerable - manual verification needed")
-            except:
+            except (requests.RequestException, OSError):
                 pass
         
         if self.iis_shortnames:
@@ -1222,9 +1155,467 @@ class WebAnalysis:
             print(f"{Colors.WARNING}        [!] No IIS shortname vulnerability detected{Colors.RESET}")
 
     # =========================================================================
+    # 19. HTTP METHOD ENUMERATION
+    # =========================================================================
+
+    def run_http_method_enum(self):
+        """Determine which HTTP methods (GET, POST, PUT, DELETE, OPTIONS, etc.) are supported."""
+        print(f"{Colors.INFO}    [+] HTTP Method Enumeration...{Colors.RESET}")
+        base_url = self.live_servers[0]['url'] if self.live_servers else self.base_url
+
+        methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE', 'CONNECT']
+        allowed_methods = []
+        for method in methods:
+            try:
+                resp = requests.request(
+                    method,
+                    base_url,
+                    headers=get_random_headers(self.target),
+                    timeout=3,
+                    verify=False
+                )
+                if resp.status_code not in [405, 501, 400]:
+                    allowed_methods.append(method)
+                    print(f"        ✓ {method} [{resp.status_code}]")
+
+                # For OPTIONS, parse the Allow header for definitive list
+                if method == 'OPTIONS' and resp.status_code == 200:
+                    allow_header = resp.headers.get('Allow', '')
+                    if allow_header:
+                        explicit_methods = [m.strip() for m in allow_header.split(',')]
+                        for m in explicit_methods:
+                            if m not in allowed_methods:
+                                allowed_methods.append(m)
+                        print(f"        ✓ Allow header: {', '.join(explicit_methods)}")
+            except requests.RequestException:
+                pass
+
+        if allowed_methods:
+            print(f"{Colors.SUCCESS}        ✓ Supported methods: {', '.join(allowed_methods)}{Colors.RESET}")
+            severity = 'Medium' if any(m in ['PUT', 'DELETE', 'TRACE', 'CONNECT'] for m in allowed_methods) else 'Info'
+            self._save_finding('Web Analysis', f'HTTP Methods: {", ".join(allowed_methods)}', severity,
+                             f'Allowed HTTP methods on {base_url}')
+
+            if self.db.connect():
+                try:
+                    cursor = self.db.conn.cursor()
+                    for m in allowed_methods:
+                        cursor.execute("""INSERT INTO http_methods
+                            (target_id, url, method, allowed)
+                            VALUES (?, ?, ?, 1)""", (self.target_id, base_url, m))
+                    self.db.conn.commit()
+                except Exception:
+                    pass
+                finally: self.db.close()
+
+    # =========================================================================
+    # 20. FORM ENUMERATION
+    # =========================================================================
+
+    def run_form_enumeration(self):
+        """Discover login pages, registration forms, search forms, and other input points."""
+        print(f"{Colors.INFO}    [+] Form Enumeration...{Colors.RESET}")
+        if not HAS_BS4:
+            print(f"{Colors.WARNING}        [!] BeautifulSoup required for form detection{Colors.RESET}")
+            return
+
+        try:
+            resp = requests.get(self.base_url, headers=get_random_headers(self.target),
+                                timeout=5, verify=False)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            forms = soup.find_all('form')
+
+            if not forms:
+                print(f"{Colors.WARNING}        [!] No forms found on homepage{Colors.RESET}")
+                return
+
+            print(f"{Colors.SUCCESS}        ✓ Found {len(forms)} form(s){Colors.RESET}")
+            for form in forms[:5]:
+                action = form.get('action', '')
+                method = form.get('method', 'GET').upper()
+                inputs = form.find_all(['input', 'textarea', 'select', 'button'])
+
+                input_fields = []
+                has_password = False
+                has_email = False
+                has_file = False
+                form_type = 'unknown'
+
+                for inp in inputs:
+                    inp_type = inp.get('type', 'text')
+                    inp_name = inp.get('name', '')
+                    if inp_type == 'password':
+                        has_password = True
+                        form_type = 'login'
+                    elif inp_type == 'email':
+                        has_email = True
+                        form_type = 'contact'
+                    elif inp_type == 'file':
+                        has_file = True
+                        form_type = 'upload'
+                    if inp_name:
+                        input_fields.append(inp_name)
+
+                # Determine form type
+                if has_password and has_email:
+                    form_type = 'login'
+                elif has_password:
+                    form_type = 'login'
+                elif has_file:
+                    form_type = 'upload'
+                elif any('search' in (f.get('name','') or '').lower() or 'q' in (f.get('name','') or '') for f in inputs):
+                    form_type = 'search'
+
+                action_url = urljoin(self.base_url, action) if action else self.base_url
+                print(f"          - Form: {action_url} [{method}]")
+                print(f"            Fields: {', '.join(input_fields[:8])}") if input_fields else None
+                print(f"            Type: {form_type}")
+
+                # Save to DB
+                if self.db.connect():
+                    try:
+                        cursor = self.db.conn.cursor()
+                        cursor.execute("""INSERT INTO web_forms
+                            (target_id, page_url, form_action, form_method, input_fields,
+                             has_password_field, has_email_field, has_file_upload, form_type)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                            (self.target_id, self.base_url, action_url, method,
+                             ', '.join(input_fields[:20]),
+                             1 if has_password else 0,
+                             1 if has_email else 0,
+                             1 if has_file else 0,
+                             form_type))
+                        self.db.conn.commit()
+                    except Exception:
+                        pass
+                    finally: self.db.close()
+
+                severity = 'Medium' if form_type == 'upload' else 'Info'
+                self._save_finding('Web Analysis', f'Form: {form_type}', severity,
+                                 f'Form on {action_url} [{method}], fields: {", ".join(input_fields[:8])}')
+        except Exception as e:
+            print(f"{Colors.WARNING}        [!] Form enumeration failed: {e}{Colors.RESET}")
+
+    # =========================================================================
+    # 21. AUTHENTICATION PAGE IDENTIFICATION
+    # =========================================================================
+
+    def run_auth_page_identification(self):
+        """Locate login, password reset, account management interfaces."""
+        print(f"{Colors.INFO}    [+] Authentication Page Identification...{Colors.RESET}")
+
+        auth_paths = [
+            ('/login', 'login'), ('/signin', 'login'), ('/auth', 'login'),
+            ('/admin', 'admin'), ('/administrator', 'admin'), ('/wp-admin', 'admin'),
+            ('/dashboard', 'admin'), ('/panel', 'admin'), ('/cpanel', 'admin'),
+            ('/reset-password', 'password_reset'), ('/forgot-password', 'password_reset'),
+            ('/reset', 'password_reset'), ('/forgot', 'password_reset'),
+            ('/register', 'registration'), ('/signup', 'registration'),
+            ('/create-account', 'registration'),
+            ('/2fa', 'mfa'), ('/mfa', 'mfa'), ('/two-factor', 'mfa'),
+            ('/account', 'account'), ('/profile', 'account'),
+            ('/user', 'account'), ('/my-account', 'account')
+        ]
+
+        auth_pages_found = []
+        base_url = self.live_servers[0]['url'] if self.live_servers else self.base_url
+
+        def check_auth_path(path, auth_type):
+            try:
+                url = urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
+                resp = requests.get(url, headers=get_random_headers(self.target),
+                                    timeout=3, verify=False, allow_redirects=False)
+                if resp.status_code in [200, 301, 302, 303, 401, 403]:
+                        return {'url': url, 'type': auth_type, 'status': resp.status_code,
+                                'location': resp.headers.get('Location', '')}
+            except requests.RequestException:
+                pass
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+            futures = {executor.submit(check_auth_path, path, atype): path for path, atype in auth_paths}
+            for future in concurrent.futures.as_completed(futures, timeout=30):
+                result = future.result()
+                if result:
+                    auth_pages_found.append(result)
+                    print(f"        ✓ {result['url']} [{result['status']}] - {result['type']}")
+
+                    if self.db.connect():
+                        try:
+                            cursor = self.db.conn.cursor()
+                            cursor.execute("""INSERT INTO auth_pages
+                                (target_id, page_url, auth_type, status_code,
+                                 has_login_form, has_password_reset, has_registration)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                                (self.target_id, result['url'], result['type'], result['status'],
+                                 1 if result['type'] == 'login' else 0,
+                                 1 if result['type'] == 'password_reset' else 0,
+                                 1 if result['type'] == 'registration' else 0))
+                            self.db.conn.commit()
+                        except Exception:
+                            pass
+                        finally: self.db.close()
+
+                    severity = 'Info'
+                    if result['type'] in ['admin', 'dashboard', 'panel', 'cpanel']:
+                        severity = 'Medium'
+                    elif result['type'] == 'mfa':
+                        severity = 'Info'
+                    self._save_finding('Web Analysis', f'Auth Page: {result["type"]}', severity,
+                                     f'{result["url"]} [{result["status"]}]')
+
+        if not auth_pages_found:
+            print(f"{Colors.WARNING}        [!] No authentication pages detected{Colors.RESET}")
+
+    # =========================================================================
+    # 22. ENHANCED SSL/TLS CONFIGURATION TESTING
+    # =========================================================================
+
+    def run_ssl_config_test(self):
+        """Test TLS protocol versions and check for weak ciphers."""
+        print(f"{Colors.INFO}    [+] SSL/TLS Configuration Testing...{Colors.RESET}")
+
+        # Use sys.version_info to handle Python 3.10+ which removed SSLv2/v3 constants
+        py_version = sys.version_info
+        tls_versions = {}
+        if hasattr(ssl, 'PROTOCOL_SSLv2'):
+            tls_versions['SSLv2'] = ssl.PROTOCOL_SSLv2
+        if hasattr(ssl, 'PROTOCOL_SSLv3'):
+            tls_versions['SSLv3'] = ssl.PROTOCOL_SSLv3
+        
+        # For TLS 1.0/1.1 use deprecated constants if available (removed in 3.13+)
+        if py_version < (3, 12):
+            if hasattr(ssl, 'PROTOCOL_TLSv1'):
+                tls_versions['TLSv1'] = ssl.PROTOCOL_TLSv1
+            if hasattr(ssl, 'PROTOCOL_TLSv1_1'):
+                tls_versions['TLSv1.1'] = ssl.PROTOCOL_TLSv1_1
+        if hasattr(ssl, 'PROTOCOL_TLSv1_2'):
+            tls_versions['TLSv1.2'] = ssl.PROTOCOL_TLSv1_2
+        
+        # Python 3.7+ explicit TLS 1.3 test (bypassed via the iteration loop, handled directly)
+        tls_supported_tls13 = False
+        if py_version >= (3, 7) and hasattr(ssl, 'TLSVersion'):
+            try:
+                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+                ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                with socket.create_connection((self.target, 443), timeout=3) as sock:
+                    with ctx.wrap_socket(sock, server_hostname=self.target):
+                        tls_supported_tls13 = True
+            except (ssl.SSLError, OSError, socket.timeout):
+                pass
+
+        supported = []
+        unsupported = []
+
+        for name, proto in tls_versions.items():
+            if proto is None:
+                unsupported.append(name)
+                continue
+            try:
+                context = ssl.SSLContext(proto)
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                with socket.create_connection((self.target, 443), timeout=3) as sock:
+                    with context.wrap_socket(sock, server_hostname=self.target):
+                        supported.append(name)
+            except (ssl.SSLError, OSError, socket.timeout):
+                unsupported.append(name)
+
+        if tls_supported_tls13:
+            supported.append('TLSv1.3')
+        else:
+            unsupported.append('TLSv1.3')
+
+        if supported:
+            print(f"{Colors.SUCCESS}        ✓ Supported: {', '.join(supported)}{Colors.RESET}")
+        if unsupported:
+            print(f"{Colors.SUCCESS}        - Not supported: {', '.join(unsupported)}{Colors.RESET}")
+
+        # Check certificate expiry
+        try:
+            context = ssl.create_default_context()
+            with socket.create_connection((self.target, 443), timeout=3) as sock:
+                with context.wrap_socket(sock, server_hostname=self.target) as ssock:
+                    cert = ssock.getpeercert()
+                    if cert:
+                        from datetime import datetime
+                        not_after = cert.get('notAfter', '')
+                        if not_after:
+                            try:
+                                # Strip timezone abbreviation (e.g., 'GMT') before parsing
+                                clean_date = ' '.join(not_after.split()[:-1]) if not_after.split()[-1].isalpha() else not_after
+                                expiry = datetime.strptime(clean_date, '%b %d %H:%M:%S %Y')
+                            except (ValueError, IndexError):
+                                # Fallback: use common date format
+                                try:
+                                    expiry = datetime.strptime(not_after.replace(' GMT', ''), '%b %d %H:%M:%S %Y')
+                                except (ValueError, IndexError):
+                                    expiry = None
+                            if expiry:
+                                days_left = (expiry - datetime.now()).days
+                            if days_left < 30:
+                                print(f"{Colors.WARNING}        ⚠ Certificate expires in {days_left} days{Colors.RESET}")
+                                self._save_finding('Web Analysis', 'SSL Certificate Expiring', 'Medium',
+                                                 f'Certificate expires in {days_left} days ({not_after})')
+                            else:
+                                print(f"{Colors.SUCCESS}        ✓ Certificate valid for {days_left} more days{Colors.RESET}")
+
+                            # Check if self-signed
+                            issuer = dict(x[0] for x in cert.get('issuer', []))
+                            subject = dict(x[0] for x in cert.get('subject', []))
+                            is_self_signed = issuer.get('organizationName', '') == subject.get('organizationName', '')
+
+                            if is_self_signed:
+                                print(f"{Colors.WARNING}        ⚠ Self-signed certificate detected{Colors.RESET}")
+                                self._save_finding('Web Analysis', 'Self-Signed Certificate', 'Medium',
+                                                 'Certificate is self-signed')
+        except Exception as e:
+            print(f"{Colors.WARNING}        [!] Cert check failed: {e}{Colors.RESET}")
+
+        # Alert on weak protocols
+        weak = [v for v in supported if v in ['SSLv2', 'SSLv3', 'TLSv1', 'TLSv1.1']]
+        if weak:
+            self._save_finding('Web Analysis', f'Weak TLS: {", ".join(weak)}', 'High',
+                             f'Server supports deprecated TLS protocols: {", ".join(weak)}')
+
+        # Save to DB
+        if self.db.connect():
+            try:
+                cursor = self.db.conn.cursor()
+                cursor.execute("""INSERT INTO ssl_config
+                    (target_id, host, supports_ssl_v2, supports_ssl_v3,
+                     supports_tls_v1, supports_tls_v11, supports_tls_v12)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (self.target_id, self.target,
+                     1 if 'SSLv2' in supported else 0,
+                     1 if 'SSLv3' in supported else 0,
+                     1 if 'TLSv1' in supported else 0,
+                     1 if 'TLSv1.1' in supported else 0,
+                     1 if 'TLSv1.2' in supported else 0))
+                self.db.conn.commit()
+            except Exception:
+                pass
+            finally: self.db.close()
+
+    # =========================================================================
+    # 23. COOKIE SECURITY AUDIT
+    # =========================================================================
+
+    def run_cookie_audit(self):
+        """Review cookies for security attributes such as Secure, HttpOnly, SameSite."""
+        print(f"{Colors.INFO}    [+] Cookie Security Audit...{Colors.RESET}")
+
+        try:
+            resp = requests.get(self.base_url, headers=get_random_headers(self.target),
+                                timeout=5, verify=False)
+            cookies = resp.cookies
+
+            if not cookies:
+                print(f"{Colors.WARNING}        [!] No cookies set{Colors.RESET}")
+                return
+
+            issues = []
+            for cookie in cookies:
+                cookie_name = cookie.name
+                issues_found = []
+
+                if not cookie.secure:
+                    issues_found.append('Missing Secure flag')
+
+                # Check HttpOnly via Set-Cookie header parsing (cookie.has_nonstandard_attr doesn't exist in Python 3)
+                set_cookie_lower = resp.headers.get('Set-Cookie', '').lower()
+                if cookie_name.lower() in set_cookie_lower and 'httponly' not in set_cookie_lower:
+                    issues_found.append('Missing HttpOnly flag')
+
+                # Check SameSite via Set-Cookie header parsing
+                if cookie_name.lower() in set_cookie_lower:
+                    if 'samesite' not in set_cookie_lower:
+                        issues_found.append('Missing SameSite attribute')
+
+                if issues_found:
+                    issues.append({'name': cookie_name, 'issues': issues_found})
+                    print(f"{Colors.WARNING}        ⚠ {cookie_name}: {', '.join(issues_found)}{Colors.RESET}")
+                else:
+                    print(f"{Colors.SUCCESS}        ✓ {cookie_name}: Secure + HttpOnly{Colors.RESET}")
+
+            if issues:
+                for issue in issues:
+                    self._save_finding('Web Analysis', f'Cookie: {issue["name"]}', 'Medium',
+                                     f'Cookie security issues: {", ".join(issue["issues"])}')
+        except Exception as e:
+            print(f"{Colors.WARNING}        [!] Cookie audit failed: {e}{Colors.RESET}")
+
+    # =========================================================================
+    # 24. RESPONSE CODE MAPPING
+    # =========================================================================
+
+    def run_response_code_map(self):
+        """Map HTTP status codes across a broader set of paths to understand the application surface."""
+        print(f"{Colors.INFO}    [+] Response Code Mapping...{Colors.RESET}")
+
+        test_paths = [
+            '/', '/admin', '/api', '/login', '/test', '/dev', '/backup',
+            '/config', '/.env', '/.git/config', '/robots.txt', '/sitemap.xml',
+            '/wp-admin', '/administrator', '/phpinfo.php', '/info.php',
+            '/server-status', '/server-info', '/crossdomain.xml',
+            '/shell.php', '/cmd.php', '/exec.php', '/uploads/', '/files/',
+            '/admin.php', '/db/', '/database/', '/sql/', '/.htaccess', '/.svn/',
+            '/wp-content/', '/images/', '/assets/', '/api/v1/', '/graphql'
+        ]
+
+        status_map = {}
+        base_url = self.live_servers[0]['url'] if self.live_servers else self.base_url
+
+        def check_path(path):
+            try:
+                url = urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
+                resp = requests.get(url, headers=get_random_headers(self.target),
+                                    timeout=2, verify=False, allow_redirects=False)
+                return path, resp.status_code, len(resp.content)
+            except requests.RequestException:
+                return path, 0, 0
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            futures = [executor.submit(check_path, p) for p in test_paths]
+            for future in concurrent.futures.as_completed(futures, timeout=45):
+                path, code, size = future.result()
+                if code not in status_map:
+                    status_map[code] = []
+                status_map[code].append(path)
+
+        print(f"{Colors.SUCCESS}        ✓ Mapped {len(test_paths)} paths across {len(status_map)} status codes{Colors.RESET}")
+
+        interesting_codes = {
+            200: 'OK',
+            301: 'Redirect',
+            302: 'Redirect',
+            401: 'Unauthorized',
+            403: 'Forbidden',
+            500: 'Server Error',
+        }
+
+        for code in sorted(status_map.keys()):
+            paths = status_map[code]
+            label = interesting_codes.get(code, f'Code {code}')
+            if code == 200 and len(paths) > 5:
+                print(f"          - {label} ({code}): {len(paths)} paths")
+            elif code in [200, 301, 302, 401, 403, 500]:
+                print(f"          - {label} ({code}): {', '.join(paths[:5])}")
+
+            # Flag interesting paths
+            if code in [200, 401, 403]:
+                for path in paths[:3]:
+                    severity = 'Medium' if path in ['.git', '.env', 'backup', 'config'] else 'Info'
+                    self._save_finding('Web Analysis', f'{code} on {path}', severity,
+                                     f'Response {code} for {path}')
+
+    # =========================================================================
     # MAIN EXECUTION
     # =========================================================================
-    
+
     def execute(self):
         """
         Main execution flow for Web Analysis module.
@@ -1234,45 +1625,57 @@ class WebAnalysis:
         print("=" * 50)
         print(f"Target: {self.target}")
         print("=" * 50 + "\n")
-        
+
         # Phase 1: Discovery
         self.run_web_probing()
         self.run_screenshots()
         self.run_vhost_fuzzing()
         self.run_cms_detection()
-        
+
         # Phase 2: URL Intelligence
         print(f"\n{Colors.INFO}--- URL Intelligence ---{Colors.RESET}")
         self.run_url_extraction()
         self.run_url_pattern_analysis()
         self.sort_by_file_extension()
-        
+
         # Phase 3: JavaScript Analysis
         print(f"\n{Colors.INFO}--- JavaScript Analysis ---{Colors.RESET}")
         self.run_javascript_analysis()
         self.run_sourcemap_extraction()
-        
+
         # Phase 4: API & Endpoint Discovery
         print(f"\n{Colors.INFO}--- API & Endpoint Discovery ---{Colors.RESET}")
         self.run_graphql_detection()
         self.run_parameter_discovery()
         self.run_favicon_analysis()
-        
+
         # Phase 5: Protocol Auditing
         print(f"\n{Colors.INFO}--- Protocol Auditing ---{Colors.RESET}")
         self.run_websocket_audit()
         self.run_grpc_reflection()
-        
-        # Phase 6: Fuzzing & Wordlists
+
+        # Phase 6: HTTP Security
+        print(f"\n{Colors.INFO}--- HTTP Security Analysis ---{Colors.RESET}")
+        self.run_http_method_enum()
+        self.run_cookie_audit()
+        self.run_ssl_config_test()
+        self.run_response_code_map()
+
+        # Phase 7: Form & Auth Analysis
+        print(f"\n{Colors.INFO}--- Form & Auth Analysis ---{Colors.RESET}")
+        self.run_form_enumeration()
+        self.run_auth_page_identification()
+
+        # Phase 8: Fuzzing & Wordlists
         print(f"\n{Colors.INFO}--- Fuzzing & Wordlists ---{Colors.RESET}")
         self.run_fuzzing()
         self.generate_wordlist()
         self.generate_password_dict()
-        
-        # Phase 7: IIS Security
+
+        # Phase 9: IIS Security
         print(f"\n{Colors.INFO}--- IIS Security ---{Colors.RESET}")
         self.run_iis_shortname_scan()
-        
+
         # Summary
         print(f"\n{Colors.SUCCESS}✓ Web Analysis Complete{Colors.RESET}")
         print("=" * 50)

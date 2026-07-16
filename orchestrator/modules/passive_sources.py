@@ -1,5 +1,5 @@
 """
-Passive Data Sources Module for Aether-Recon OSINT Framework
+Passive Data Sources Module for Argus OSINT Framework
 Implements 40+ passive reconnaissance data sources for subdomain discovery,
 email harvesting, IP intelligence, and threat analysis.
 """
@@ -28,20 +28,13 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import config, Colors
 
-# User agents for rotation
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-]
-
-def get_random_ua() -> str:
-    return random.choice(USER_AGENTS)
+# Import shared utilities
+from utils import get_random_user_agent as get_random_ua, get_simple_headers, run_command
 
 def make_request(url: str, headers: dict = None, timeout: int = 10, json_resp: bool = False):
     """Make HTTP request with error handling."""
     try:
-        hdrs = headers or {'User-Agent': get_random_ua()}
+        hdrs = headers or get_simple_headers()
         resp = requests.get(url, headers=hdrs, timeout=timeout, verify=False)
         if resp.status_code == 200:
             return resp.json() if json_resp else resp.text

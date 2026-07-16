@@ -1,27 +1,25 @@
 import os
 import sys
-import sys
 import time
 import json
 import sqlite3
 from jinja2 import Environment, FileSystemLoader
 
 # Configuration
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-DB_PATH = "aether.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "argus.db")
 
 def connect_db():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(str(DB_PATH))
         return conn
     except Exception as e:
         print(f"Error connecting to DB: {e}")
         return None
 
-def save_finding(target, subdomain):
-    conn = connect_db()
-    if not conn: return
+def save_finding(target, subdomain):    conn = connect_db()
+    if not conn:
+        return
     cursor = conn.cursor()
     
     # ensure target exists
@@ -70,8 +68,8 @@ def generate_report(target):
     if row:
         domain_info = {
             "registrar": row[0],
-            "created": row[1],
-            "expires": row[2],
+            "creation_date": row[1],
+            "expiration_date": row[2],
             "registrant": row[3]
         }
         
@@ -83,8 +81,8 @@ def generate_report(target):
         ssl_info = {"issuer": row[0], "valid_to": row[1]}
 
     # 3. Ports
-    cursor.execute("SELECT port, service, version FROM ports WHERE target_id = ?", (target_id,))
-    ports = [{"port": r[0], "service": r[1], "version": r[2]} for r in cursor.fetchall()]
+    cursor.execute("SELECT port, protocol, service, version FROM ports WHERE target_id = ?", (target_id,))
+    ports = [{"port": r[0], "protocol": r[1] or 'tcp', "service": r[2], "version": r[3]} for r in cursor.fetchall()]
 
     # 4. DNS
     cursor.execute("SELECT record_type, value, ttl FROM dns_records WHERE target_id = ?", (target_id,))
@@ -96,7 +94,7 @@ def generate_report(target):
 
     # 6. Directories
     cursor.execute("SELECT path, status_code FROM directories WHERE target_id = ?", (target_id,))
-    dirs = [{"path": r[0], "code": r[1]} for r in cursor.fetchall()]
+    dirs = [{"path": r[0], "status_code": r[1]} for r in cursor.fetchall()]
 
     # 7. Subdomains
     cursor.execute("SELECT subdomain FROM subdomains WHERE target_id = ?", (target_id,))
@@ -158,8 +156,8 @@ def generate_report(target):
     conn.close()
 
 def main():
-    print("Starting Aether-Recon Reporter (SQLite Mode)...")
-    print("Watching local event queue (aether.db)...")
+    print("Starting Argus OSINT Reporter (SQLite Mode)...")
+    print("Watching local event queue (argus.db)...")
     
     conn = connect_db()
     if not conn:

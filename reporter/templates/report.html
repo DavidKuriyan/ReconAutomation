@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHER RECON | {{ target }}</title>
+    <title>ARGUS OSINT | {{ target }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -447,7 +447,7 @@
     <div class="layout">
         <!-- SIDEBAR -->
         <aside class="sidebar">
-            <div class="logo">AETHER<span style="color:#fff">RECON</span></div>
+            <div class="logo">ARGUS<span style="color:#fff">OSINT</span></div>
             <div class="nav-menu">
                 <div class="nav-item active" onclick="showSection('dashboard', this)">
                     Dashboard
@@ -510,9 +510,9 @@
                             <div class="metric-row"><span class="metric-label">Registrar</span> <span
                                     class="metric-val">{{ domain_info.registrar }}</span></div>
                             <div class="metric-row"><span class="metric-label">Created</span> <span
-                                    class="metric-val">{{ domain_info.created }}</span></div>
+                                    class="metric-val">{{ domain_info.creation_date }}</span></div>
                             <div class="metric-row"><span class="metric-label">Expires</span> <span
-                                    class="metric-val">{{ domain_info.expires }}</span></div>
+                                    class="metric-val">{{ domain_info.expiration_date }}</span></div>
                             <div class="metric-row"><span class="metric-label">Registrant</span> <span
                                     class="metric-val">{{ domain_info.registrant }}</span></div>
                             {% else %}
@@ -569,7 +569,7 @@
                                     {% for p in ports %}
                                     <tr>
                                         <td><span class="status-dot dot-green"></span>{{ p.port }}</td>
-                                        <td>TCP</td>
+                                        <td>{{ p.protocol }}</td>
                                         <td>{{ p.service }}</td>
                                         <td style="color: var(--text-muted)">{{ p.version }}</td>
                                     </tr>
@@ -688,10 +688,10 @@
                                 {% for d in dirs %}
                                 <tr>
                                     <td>
-                                        {% if d.code < 300 %}<span style="color:var(--success)">{{ d.code }}</span>
-                                            {% elif d.code < 400 %}<span style="color:var(--accent-primary)">{{ d.code
+                                        {% if d.status_code < 300 %}<span style="color:var(--success)">{{ d.status_code }}</span>
+                                            {% elif d.status_code < 400 %}<span style="color:var(--accent-primary)">{{ d.status_code
                                                 }}</span>
-                                                {% else %}<span style="color:var(--danger)">{{ d.code }}</span>{% endif
+                                                {% else %}<span style="color:var(--danger)">{{ d.status_code }}</span>{% endif
                                                 %}
                                     </td>
                                     <td>{{ d.path }}</td>
@@ -750,6 +750,8 @@
                     </div>
                 </div>
                 {% endif %}
+            </div>
+
             <!-- SECTION: THREAT INTEL -->
             <div id="threat" class="view-section">
                 <header>

@@ -1,5 +1,5 @@
 """
-Configuration Management for Enhanced Aether-Recon OSINT Framework
+Configuration Management for Argus OSINT Framework
 Handles API keys, rate limiting, and module settings
 """
 
@@ -7,12 +7,12 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-# Load environment variables from .env file
 # Prioritize .env.local for local overrides
-if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.local')):
-    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.local'))
+_local_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.local')
+if os.path.exists(_local_env):
+    load_dotenv(_local_env, override=True)
 
-load_dotenv()
+load_dotenv(override=True)
 
 class Config:
     """Central configuration for all OSINT modules"""
@@ -75,6 +75,49 @@ class Config:
     # Web Analysis Settings
     RATE_LIMIT_WEB_ANALYSIS = float(os.getenv('RATE_LIMIT_WEB_ANALYSIS', '5.0'))
     MAX_WORKERS_WEB_ANALYSIS = int(os.getenv('MAX_WORKERS_WEB_ANALYSIS', '10'))
+    HTTP_TIMEOUT_FAST = int(os.getenv('HTTP_TIMEOUT_FAST', '3'))
+    MAX_WORKERS_GENERAL = int(os.getenv('MAX_WORKERS_GENERAL', '25'))
+    
+    # Port Scanning Configuration
+    # Common TCP ports to scan
+    COMMON_TCP_PORTS = os.getenv('COMMON_TCP_PORTS',
+        '21,22,23,25,53,69,80,81,110,111,123,135,137,139,143,161,162,'
+        '389,443,445,465,500,514,554,587,593,631,636,873,990,992,993,'
+        '995,1025,1194,1433,1521,2049,2082,2083,2086,2087,2095,2096,'
+        '3306,3389,5432,5900,5985,5986,6379,8080,8081,8443,9000,9090,10000'
+    )
+    # Common UDP ports to scan
+    COMMON_UDP_PORTS = os.getenv('COMMON_UDP_PORTS',
+        '53,67,68,69,123,135,137,138,139,161,162,389,445,500,514,520,'
+        '623,631,1433,1434,1900,4500,5351,5353,49152'
+    )
+    # Common web ports to probe
+    COMMON_WEB_PORTS = os.getenv('COMMON_WEB_PORTS',
+        '80,443,8080,8443,8000,3000'
+    )
+    
+    # Virtual Host Fuzzing Prefixes
+    VHOST_PREFIXES = os.getenv('VHOST_PREFIXES',
+        'www,dev,staging,test,api,admin,app,portal,mail,blog,cdn,static,assets,dashboard,panel'
+    )
+    
+    # GraphQL endpoints to probe
+    GRAPHQL_ENDPOINTS = os.getenv('GRAPHQL_ENDPOINTS',
+        '/graphql,/api/graphql,/v1/graphql,/gql'
+    )
+    
+    # Common gRPC ports
+    GRPC_PORTS = os.getenv('GRPC_PORTS', '50051,9090')
+    
+    # HTTP/HTTPS port sets for banner grabbing
+    HTTP_PORTS = os.getenv('HTTP_PORTS', '80,8080,8000,81')
+    HTTPS_PORTS = os.getenv('HTTPS_PORTS', '443,8443,2083,2087,2096')
+    
+    # New API Keys (Optional - free tiers available)
+    ABUSEIPDB_API_KEY = os.getenv('ABUSEIPDB_API_KEY', '')
+    IPINFO_API_KEY = os.getenv('IPINFO_API_KEY', '')
+    WHOISXML_API_KEY = os.getenv('WHOISXML_API_KEY', '')
+    TECHCHECKER_API_KEY = os.getenv('TECHCHECKER_API_KEY', '')
     
     # Timeouts (seconds)
     HTTP_TIMEOUT = int(os.getenv('HTTP_TIMEOUT', '10'))
@@ -90,7 +133,7 @@ class Config:
     AUDIT_LOGGING = os.getenv('AUDIT_LOGGING', 'true').lower() == 'true'
     
     # User Agent
-    USER_AGENT = os.getenv('USER_AGENT', 'Aether-Recon/2.0 (OSINT Framework)')
+    USER_AGENT = os.getenv('USER_AGENT', 'Argus-OSINT/2.0 (Intelligence Framework)')
     
     @classmethod
     def check_api_availability(cls):
@@ -101,7 +144,11 @@ class Config:
             'Shodan': bool(cls.SHODAN_API_KEY),
             'GitHub': bool(cls.GITHUB_TOKEN),
             'OTX': bool(cls.OTX_API_KEY),
-            'Censys': bool(cls.CENSYS_API_ID and cls.CENSYS_API_SECRET)
+            'Censys': bool(cls.CENSYS_API_ID and cls.CENSYS_API_SECRET),
+            'AbuseIPDB': bool(cls.ABUSEIPDB_API_KEY),
+            'IPinfo': bool(cls.IPINFO_API_KEY),
+            'WhoisXML': bool(cls.WHOISXML_API_KEY),
+            'TechChecker': bool(cls.TECHCHECKER_API_KEY),
         }
         return available_apis
     

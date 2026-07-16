@@ -13,3 +13,4 @@ reporter/db_data/
 *.sqlite3
 .vscode/
 .idea/
+nul
