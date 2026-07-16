@@ -1049,3 +1049,221 @@ class PassiveRecon:
                 pass
             finally:
                 self.db.close()
+
+    # =========================================================================
+    # IP-SPECIFIC WRAPPER METHODS (called by orchestrator for IP targets)
+    # These methods take an IP argument directly instead of resolving from self.target
+    # =========================================================================
+
+    def run_dnsbl_check_with_ip(self, ip):
+        """DNSBL check using a pre-resolved IP address (for IP targets)."""
+        print("[+] Running DNSBL / Blacklist Reputation Check (IP target)...")
+        try:
+            reversed_ip = '.'.join(reversed(ip.split('.')))
+            
+            dnsbls = [
+                ('Spamhaus', 'zen.spamhaus.org'),
+                ('SpamCop', 'bl.spamcop.net'),
+                ('Barracuda', 'b.barracudacentral.org'),
+                ('Sorbs', 'dnsbl.sorbs.net'),
+                ('AHBL', 'dnsbl.ahbl.org'),
+                ('NJABL', 'dnsbl.njabl.org'),
+                ('CBL', 'cbl.abuseat.org'),
+                ('URIBL', 'multi.uribl.com'),
+            ]
+            
+            listed_on = []
+            for name, dnsbl in dnsbls:
+                try:
+                    query = f"{reversed_ip}.{dnsbl}"
+                    answers = socket.gethostbyname_ex(query)
+                    if answers:
+                        listed_on.append(name)
+                        print(f"      ⚠ Listed on {name} ({dnsbl})")
+                except socket.gaierror:
+                    pass
+                except Exception:
+                    pass
+            
+            if listed_on:
+                print(f"    - Blacklisted on {len(listed_on)} DNSBL(s): {', '.join(listed_on)}")
+                self._db_save_finding(f"IP Blacklisted: {', '.join(listed_on)}", "High",
+                    f"Target IP {ip} listed on DNSBLs: {', '.join(listed_on)}")
+                
+                if self.db.connect():
+                    try:
+                        cursor = self.db.conn.cursor()
+                        cursor.execute("""INSERT INTO ip_reputation 
+                            (target_id, ip_address, blacklisted, blacklist_sources)
+                            VALUES (?, ?, 1, ?)""",
+                            (self.target_id, ip, ', '.join(listed_on)))
+                        self.db.conn.commit()
+                    except: pass
+                    finally: self.db.close()
+            else:
+                print(f"    - IP {ip} is not blacklisted on major DNSBLs")
+                if self.db.connect():
+                    try:
+                        cursor = self.db.conn.cursor()
+                        cursor.execute("""INSERT INTO ip_reputation 
+                            (target_id, ip_address, blacklisted, blacklist_sources)
+                            VALUES (?, ?, 0, 'Clean on all tested DNSBLs')""",
+                            (self.target_id, ip))
+                        self.db.conn.commit()
+                    except: pass
+                    finally: self.db.close()
+        except Exception as e:
+            print(f"    [!] DNSBL check failed: {e}")
+
+    def run_bgp_analysis_with_ip(self, ip):
+        """BGP/ASN analysis using a pre-resolved IP address."""
+        print("[+] Running BGP Route Analysis (IP target)...")
+        try:
+            # Use ipapi.co for ASN info
+            url = f"https://ipapi.co/{ip}/json/"
+            res = requests.get(url, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                asn = data.get('asn', '')
+                asn_org = data.get('org', '')
+                country = data.get('country_name', '')
+                
+                if asn:
+                    asn_num = asn.replace('AS', '')
+                    print(f"    - ASN: {asn} ({asn_org})")
+                    print(f"    - Country: {country}")
+                    
+                    try:
+                        bgp_url = f"https://api.hackertarget.com/aslookup/?q={asn_num}"
+                        bgp_res = requests.get(bgp_url, timeout=10)
+                        if bgp_res.status_code == 200:
+                            print(f"    - BGP Routes (prefixes):")
+                            routes = bgp_res.text.strip().split('\n')[:10]
+                            for route in routes:
+                                print(f"      {route}")
+                            
+                            if self.db.connect():
+                                try:
+                                    cursor = self.db.conn.cursor()
+                                    cursor.execute("""INSERT INTO bgp_info
+                                        (target_id, ip_address, asn, asn_name, asn_country, asn_routes)
+                                        VALUES (?, ?, ?, ?, ?, ?)""",
+                                        (self.target_id, ip, int(asn_num), asn_org, country, '\n'.join(routes)))
+                                    self.db.conn.commit()
+                                except: pass
+                                finally: self.db.close()
+                    except:
+                        pass
+        except Exception as e:
+            print(f"    [!] BGP analysis failed: {e}")
+
+    def run_search_engine_ip_with_ip(self, ip):
+        """Search search engines for IP references (using pre-resolved IP)."""
+        print("[+] Checking search engines for IP references (IP target)...")
+        try:
+            search_urls = [
+                f"https://html.duckduckgo.com/html/?q=%22{ip}%22+security+threat",
+                f"https://html.duckduckgo.com/html/?q=%22{ip}%22+malware+report",
+                f"https://html.duckduckgo.com/html/?q=%22{ip}%22+hacker+incident",
+            ]
+            
+            for search_url in search_urls:
+                try:
+                    res = requests.get(search_url, 
+                        headers={'User-Agent': _get_ua()},
+                        timeout=8)
+                    if res.status_code == 200 and 'did not match' not in res.text:
+                        snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', res.text, re.DOTALL)[:3]
+                        if snippets:
+                            print(f"    - Results found for: {search_url.split('q=')[1][:60]}...")
+                            for s in snippets:
+                                clean = re.sub(r'<[^>]+>', '', s).strip()
+                                print(f"      > {clean[:120]}...") if len(clean) > 120 else print(f"      > {clean}")
+                            break
+                except:
+                    pass
+        except Exception as e:
+            print(f"    [!] Search engine check failed: {e}")
+
+    def run_abuseipdb_check_with_ip(self, ip):
+        """Check IP reputation via AbuseIPDB API using a pre-resolved IP."""
+        if not config.ABUSEIPDB_API_KEY:
+            print("[!] AbuseIPDB API key not configured, skipping")
+            return
+        
+        print("[+] Checking AbuseIPDB reputation (IP target)...")
+        try:
+            url = "https://api.abuseipdb.com/api/v2/check"
+            headers = {
+                'Key': config.ABUSEIPDB_API_KEY,
+                'Accept': 'application/json'
+            }
+            params = {'ipAddress': ip, 'maxAgeInDays': '90'}
+            
+            res = requests.get(url, headers=headers, params=params, timeout=10)
+            if res.status_code == 200:
+                data = res.json().get('data', {})
+                abuse_score = data.get('abuseConfidenceScore', 0)
+                total_reports = data.get('totalReports', 0)
+                isp = data.get('isp', '')
+                usage = data.get('usageType', '')
+                
+                print(f"    - Abuse Score: {abuse_score}/100")
+                print(f"    - Reports: {total_reports}")
+                print(f"    - ISP: {isp}")
+                
+                if abuse_score > 50:
+                    self._db_save_finding(f"AbuseIPDB: High Abuse Score ({abuse_score})", "High",
+                        f"IP {ip} has {total_reports} abuse reports, score: {abuse_score}, ISP: {isp}")
+                
+                if self.db.connect():
+                    try:
+                        cursor = self.db.conn.cursor()
+                        cursor.execute("""UPDATE ip_reputation SET 
+                            abuse_reports=?, threat_score=?, isp=?, usage_type=?
+                            WHERE target_id=? AND ip_address=?""",
+                            (total_reports, abuse_score, isp, usage, self.target_id, ip))
+                        self.db.conn.commit()
+                    except: pass
+                    finally: self.db.close()
+        except Exception as e:
+            print(f"    [!] AbuseIPDB check failed: {e}")
+
+    def run_certificate_transparency_with_ip(self, ip):
+        """Check certificate transparency logs for certificates issued to this IP."""
+        print("[+] Checking Certificate Transparency logs for IP...")
+        try:
+            # crt.sh supports IP search: https://crt.sh/?q=ip.address
+            url = f"https://crt.sh/?q={ip}&output=json"
+            res = requests.get(url, timeout=15, headers={'User-Agent': _get_ua()})
+            
+            if res.status_code == 200:
+                data = res.json()
+                if data and len(data) > 0:
+                    cert_count = len(data)
+                    print(f"    - Found {cert_count} certificates issued for this IP")
+                    
+                    # Collect unique domains/subdomains
+                    domains = set()
+                    for entry in data[:50]:  # Limit to first 50
+                        name = entry.get('name_value', '')
+                        for sub in name.split('\n'):
+                            if sub and '*' not in sub:
+                                domains.add(sub.strip())
+                    
+                    if domains:
+                        print(f"    - Associated domains ({len(domains)}):")
+                        for domain in list(domains)[:15]:
+                            print(f"      > {domain}")
+                        
+                        # Store findings
+                        self._db_save_finding(
+                            f"Certificates Found for IP", "Info",
+                            f"IP {ip} has {cert_count} certificates across {len(domains)} domains"
+                        )
+                else:
+                    print(f"    - No certificates found for this IP")
+            else:
+                print(f"    - crt.sh returned status {res.status_code}")
+        except Exception as e:
+            print(f"    [!] Certificate Transparency check failed: {e}")

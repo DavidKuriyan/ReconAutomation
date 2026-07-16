@@ -7,6 +7,7 @@ and manages the overall scan workflow with defensive coding practices.
 import os
 import sys
 import time
+import re
 import sqlite3
 import concurrent.futures
 import socket
@@ -89,17 +90,35 @@ class ReconEngine:
         self.custom_modules = custom_modules or []
         self.db = DatabaseManager(DB_PATH)
         
+        # Detect if target is an IP address
+        self.is_ip_target = self._is_ip_address(self.target)
+        
         # Instantiate sub-modules
         self.passive = PassiveRecon(self.target, 0, self.db) # ID updated later
         self.active = ActiveRecon(self.target, 0, self.db)   # ID updated later
 
+    @staticmethod
+    def _is_ip_address(value: str) -> bool:
+        """Check if the target is an IPv4 address."""
+        ip_pattern = r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$'
+        match = re.match(ip_pattern, value.strip())
+        if not match:
+            return False
+        return all(0 <= int(g) <= 255 for g in match.groups())
+
     def _normalize_target(self, target: str) -> str:
-        """Sanitize and normalize target input."""
+        """Sanitize and normalize target input.
+        If target is an IP address, return it as-is.
+        If target is a URL, extract the hostname.
+        """
         target = target.strip()
+        # If it's already an IP, return directly
+        if self._is_ip_address(target):
+            return target
         if "://" in target:
              parsed = urlparse(target)
              return parsed.netloc
-        return target.replace("/", "")
+        return target.replace("/", "").split(":")[0].split("?")[0]
 
     def get_or_create_target(self):
         """Register the target in the database and retrieve its ID."""
@@ -120,6 +139,11 @@ class ReconEngine:
                 self.active.target_id = self.target_id
                 
             print(f"[*] Target ID: {self.target_id}")
+            
+            # If target is an IP, set target_ip immediately
+            if self.is_ip_target:
+                self.target_ip = self.target
+                print(f"[*] Target is an IP address, skipping domain resolution")
         except sqlite3.Error as e:
             print(f"{Colors.ERROR}[!] Failed to register target: {e}{Colors.RESET}")
         finally:
@@ -274,6 +298,7 @@ class ReconEngine:
     def execute(self):
         """
         Main execution flow.
+        Detects whether target is IP or domain and runs appropriate modules.
         """
         print("\n" + "="*70)
         print(f"{Colors.BANNER}🛰️  ARGUS OSINT v2.0 - Intelligence Framework{Colors.BANNER}")
@@ -290,75 +315,119 @@ class ReconEngine:
         self.get_or_create_target()
         if not self.target_id:
             return
+        
+        if self.is_ip_target:
+            print(f"{Colors.INFO}[*] Target detected as IP address: {self.target}{Colors.RESET}")
+            print(f"{Colors.INFO}[*] Running full IP reconnaissance pipeline (40+ techniques from upgrade.md){Colors.RESET}")
 
         # 4. Phase 1: Passive Recon
         if self.should_run('passive'):
             print(f"\n{Colors.HEADER}PHASE 1: PASSIVE RECONNAISSANCE{Colors.RESET}")
             print("="*50)
             
-            self.execution_wrapper(self.passive.run_whois, "WHOIS")
-            self.execution_wrapper(self.passive.run_rir_whois, "RIR WHOIS")
-            self.execution_wrapper(self.passive.run_dns_enum, "DNS Enumeration")
+            # --- DOMAIN-SPECIFIC CHECKS (skip if IP target) ---
+            if not self.is_ip_target:
+                self.execution_wrapper(self.passive.run_whois, "WHOIS")
+                self.execution_wrapper(self.passive.run_rir_whois, "RIR WHOIS")
+                self.execution_wrapper(self.passive.run_dns_enum, "DNS Enumeration")
             
-            # Module: Geolocation
+            # Module: Geolocation (always runs - works for both IP and domain)
             if config.ENABLE_GEOLOCATION:
                 print(f"{Colors.INFO}[+] Running Geolocation Intelligence...{Colors.RESET}")
                 geo = GeoIntelligence(self.target, self.target_id)
                 self.execution_wrapper(geo.execute, "Geolocation")
-                # Update target_ip from geo if available, else resolve it manually
+                # Update target_ip from geo if available
                 if geo.target_ip:
                      self.target_ip = geo.target_ip
-                else:
+                elif not self.is_ip_target:
                      self.resolve_target_ip()
-            else:
+            elif not self.is_ip_target:
                 self.resolve_target_ip()
 
-            self.execution_wrapper(self.passive.run_ssl_analysis, "SSL Analysis")
-            self.execution_wrapper(self.passive.run_subdomain_discovery, "Subdomain Discovery")
-            
-            # Module: Historical
-            if config.ENABLE_HISTORICAL:
-                 hist = HistoricalIntelligence(self.target, self.target_id)
-                 self.execution_wrapper(hist.execute, "Historical Intel")
+            # --- DOMAIN-SPECIFIC CHECKS ONLY ---
+            if not self.is_ip_target:
+                self.execution_wrapper(self.passive.run_ssl_analysis, "SSL Analysis")
+                self.execution_wrapper(self.passive.run_subdomain_discovery, "Subdomain Discovery")
+                
+                # Module: Historical
+                if config.ENABLE_HISTORICAL:
+                     hist = HistoricalIntelligence(self.target, self.target_id)
+                     self.execution_wrapper(hist.execute, "Historical Intel")
 
-            self.execution_wrapper(self.passive.run_email_harvest, "Email Harvesting")
-            self.execution_wrapper(self.passive.run_smtp_analysis, "SMTP Analysis")
+                self.execution_wrapper(self.passive.run_email_harvest, "Email Harvesting")
+                self.execution_wrapper(self.passive.run_smtp_analysis, "SMTP Analysis")
 
-            # Module: Threat Intel
+            # Module: Threat Intel (works with IP)
             if config.ENABLE_THREAT_INTEL:
-                if not self.target_ip:
+                if not self.target_ip and self.is_ip_target:
+                    self.target_ip = self.target
+                elif not self.target_ip:
                     self.resolve_target_ip()
                     
                 threat = ThreatIntelligence(self.target, self.target_id, self.target_ip)
                 self.execution_wrapper(threat.execute, "Threat Intelligence")
 
-            # Module: Breach Intel
-            if config.ENABLE_BREACH_INTEL:
+            # Module: Breach Intel (domain only - needs emails)
+            if config.ENABLE_BREACH_INTEL and not self.is_ip_target:
                 breach = BreachIntelligence(self.target, self.target_id, list(self.passive.discovered_emails))
                 self.execution_wrapper(breach.execute, "Breach Intelligence")
 
-            # NEW: Enhanced Passive Techniques
-            if self.target_ip:
-                self.execution_wrapper(self.passive.run_dnsbl_check, "DNSBL Check")
-                self.execution_wrapper(self.passive.run_bgp_analysis, "BGP Analysis")
-                self.execution_wrapper(self.passive.run_search_engine_ip, "Search Engine IP")
-                self.execution_wrapper(self.passive.run_abuseipdb_check, "AbuseIPDB Check")
-            self.execution_wrapper(self.passive.run_historical_whois, "Historical WHOIS")
-            self.execution_wrapper(self.passive.run_reverse_whois, "Reverse WHOIS")
+            # --- IP-SPECIFIC PASSIVE CHECKS ---
+            if self.target_ip or self.is_ip_target:
+                ip_to_check = self.target_ip or self.target
+                if not self.target_ip:
+                    self.target_ip = ip_to_check
+                    
+                # DNSBL / Blacklist Reputation Check
+                self.execution_wrapper(
+                    lambda ip=ip_to_check: self.passive.run_dnsbl_check_with_ip(ip), 
+                    "DNSBL Check"
+                )
+                # BGP / ASN Analysis
+                self.execution_wrapper(
+                    lambda ip=ip_to_check: self.passive.run_bgp_analysis_with_ip(ip), 
+                    "BGP Analysis"
+                )
+                # Search engine IP mentions
+                self.execution_wrapper(
+                    lambda ip=ip_to_check: self.passive.run_search_engine_ip_with_ip(ip), 
+                    "Search Engine IP"
+                )
+                # AbuseIPDB check
+                self.execution_wrapper(
+                    lambda ip=ip_to_check: self.passive.run_abuseipdb_check_with_ip(ip), 
+                    "AbuseIPDB Check"
+                )
+                # Certificate Transparency (for IP targets)
+                self.execution_wrapper(
+                    lambda ip=ip_to_check: self.passive.run_certificate_transparency_with_ip(ip),
+                    "Certificate Transparency"
+                )
+
+            # Historical WHOIS and Reverse WHOIS (domain only)
+            if not self.is_ip_target:
+                self.execution_wrapper(self.passive.run_historical_whois, "Historical WHOIS")
+                self.execution_wrapper(self.passive.run_reverse_whois, "Reverse WHOIS")
 
         # 5. Phase 2: Active Recon
         if self.should_run('active'):
             print(f"\n{Colors.HEADER}PHASE 2: ACTIVE RECONNAISSANCE{Colors.RESET}")
             print("="*50)
             
+            # Ping Sweep (ICMP Echo)
             self.execution_wrapper(self.active.run_ping, "Ping Check")
+            
+            # TCP Connect / SYN / UDP Scan + Version Detection + OS Fingerprinting
             self.execution_wrapper(self.active.run_nmap, "Port Scan")
-            self.execution_wrapper(self.active.run_tech_detect, "Tech Detection")
-            self.execution_wrapper(self.active.run_techchecker_api, "Tech Checker API")
-            self.execution_wrapper(self.active.run_dirb_lite, "Directory Busting")
-            self.execution_wrapper(self.active.run_extended_web_recon, "Extended Web Recon")
+            
+            # --- DOMAIN-SPECIFIC ACTIVE CHECKS ---
+            if not self.is_ip_target:
+                self.execution_wrapper(self.active.run_tech_detect, "Tech Detection")
+                self.execution_wrapper(self.active.run_techchecker_api, "Tech Checker API")
+                self.execution_wrapper(self.active.run_dirb_lite, "Directory Busting")
+                self.execution_wrapper(self.active.run_extended_web_recon, "Extended Web Recon")
 
-            # NEW: Advanced Active Recon Techniques
+            # Advanced Active Recon Techniques (works with IP)
             self.execution_wrapper(self.active.run_dns_zone_transfer, "DNS Zone Transfer")
             self.execution_wrapper(self.active.run_snmp_enum, "SNMP Enumeration")
             self.execution_wrapper(self.active.run_smb_enum, "SMB Enumeration")
@@ -366,30 +435,35 @@ class ReconEngine:
             self.execution_wrapper(self.active.run_ntp_enum, "NTP Enumeration")
             self.execution_wrapper(self.active.run_smtp_enum, "SMTP Enumeration")
             self.execution_wrapper(self.active.run_os_fingerprint, "OS Fingerprinting")
+            
+            # Traceroute - Network path mapping (IP-based)
+            self.execution_wrapper(self.active.run_traceroute, "Traceroute")
 
-            # Module: Metadata
-            if config.ENABLE_METADATA:
+            # Module: Metadata (domain only - needs web content)
+            if config.ENABLE_METADATA and not self.is_ip_target:
                 meta = MetadataExtractor(self.target, self.target_id)
                 self.execution_wrapper(meta.execute, "Metadata Extraction")
 
-        # 6. Phase 3: Search Intel
-        if self.should_run('search') and config.ENABLE_SEARCH_INTEL:
+        # 6. Phase 3: Search Intel (domain only)
+        if self.should_run('search') and config.ENABLE_SEARCH_INTEL and not self.is_ip_target:
             print(f"\n{Colors.HEADER}PHASE 3: SEARCH INTELLIGENCE{Colors.RESET}")
             print("="*50)
             search = SearchIntelligence(self.target, self.target_id)
             self.execution_wrapper(search.execute, "Search Intelligence")
 
-        # 7. Phase 4: Web Analysis
-        if self.should_run('web') and config.ENABLE_WEB_ANALYSIS:
+        # 7. Phase 4: Web Analysis (domain only)
+        if self.should_run('web') and config.ENABLE_WEB_ANALYSIS and not self.is_ip_target:
             print(f"\n{Colors.HEADER}PHASE 4: WEB ANALYSIS{Colors.RESET}")
             print("="*50)
             web = WebAnalysis(self.target, self.target_id, self.db)
             self.execution_wrapper(web.execute, "Web Analysis")
 
-        # 7. Finalization
+        # 8. Finalization
         print(f"\n{Colors.SUCCESS}✓ SCAN COMPLETED SUCCESSFULLY{Colors.RESET}")
         print("="*50)
         print(f"[*] Results saved to database: {os.path.abspath(DB_PATH)}")
+        if self.is_ip_target:
+            print(f"[*] IP Recon Summary: All available network checks from upgrade.md executed")
         
         self.calculate_risk_score()
         self.prompt_reporting()

@@ -985,6 +985,78 @@ class ActiveRecon:
         except Exception as e:
             print(f"{Colors.WARNING}    [!] Tech detection error: {e}{Colors.RESET}")
 
+    def run_traceroute(self):
+        """Perform traceroute to map network path between source and target.
+        Wraps OS tracert (Windows) / traceroute (Linux/macOS).
+        Captures hop IPs and stores route as JSON.
+        """
+        print("[+] Running Traceroute (Network Path Mapping)...")
+        try:
+            import json
+            
+            if os.name == 'nt':
+                cmd = ['tracert', '-h', '30', '-w', '3000', self.target]
+            else:
+                cmd = ['traceroute', '-m', '30', '-w', '3', '-q', '1', self.target]
+            
+            success, stdout, stderr = self._run_command(cmd, timeout=120)
+            
+            if success and stdout:
+                hops = []
+                for line in stdout.split('\n'):
+                    line = line.strip()
+                    if not line or not line[0].isdigit():
+                        continue
+                    # Non-capturing groups (?:...) are NOT counted in group index.
+                    # Groups: (1)=\d+ (hop), (2)=.+ (host)
+                    hop_match = re.match(
+                        r'\s*(\d+)\s+'
+                        r'(?:\*|<?[\d.]+)\s+ms\s+'
+                        r'(?:\*|<?[\d.]+)\s+ms\s+'
+                        r'(?:\*|<?[\d.]+)\s+ms\s+'
+                        r'(.+)$',
+                        line
+                    )
+                    if hop_match:
+                        hop_num = int(hop_match.group(1))
+                        hop_ip = hop_match.group(2).strip()
+                        # Extract just the IP if format is "hostname (IP)"
+                        ip_extract = re.search(r'\(([\d.]+)\)', hop_ip)
+                        if ip_extract:
+                            hop_ip = ip_extract.group(1)
+                        else:
+                            # Clean up hostname before IP
+                            hop_ip = hop_ip.split()[-1] if ' ' in hop_ip else hop_ip
+                        hops.append({'hop': hop_num, 'ip': hop_ip})
+                
+                if hops:
+                    total_hops = len(hops)
+                    print(f"    - {total_hops} hops mapped")
+                    for hop in hops[:10]:
+                        print(f"      Hop {hop['hop']}: {hop['ip']}")
+                    if total_hops > 10:
+                        print(f"      ... and {total_hops - 10} more hops")
+                    
+                    if self.db.connect():
+                        try:
+                            cursor = self.db.conn.cursor()
+                            cursor.execute("""INSERT INTO traceroute 
+                                (target_id, target_host, hop_count, hops_json, avg_rtt_ms)
+                                VALUES (?, ?, ?, ?, 0)""",
+                                (self.target_id, self.target, total_hops, json.dumps(hops)))
+                            self.db.conn.commit()
+                        except Exception as db_err:
+                            print(f"    [!] DB error (traceroute): {db_err}")
+                        finally:
+                            self.db.close()
+                else:
+                    print("    - Could not parse traceroute output")
+            else:
+                print(f"    - Traceroute failed: {stderr[:100] if stderr else 'No output'}")
+                
+        except Exception as e:
+            print(f"    [!] Traceroute error: {e}")
+
     def run_techchecker_api(self):
         """Query TechnologyChecker.io API for comprehensive tech stack detection.
         Integrates external API for broader coverage beyond local signature matching."""
